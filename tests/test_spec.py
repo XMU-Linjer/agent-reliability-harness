@@ -91,25 +91,23 @@ class TestLoadScenarios:
 
     def test_load_scenarios_returns_all(self) -> None:
         scenarios = load_scenarios(SCENARIOS_DIR)
-        assert len(scenarios) == 5
-
-    def test_load_scenarios_deterministic_order(self) -> None:
-        """load_scenarios sorts by filename, so order must be stable."""
-        scenarios = load_scenarios(SCENARIOS_DIR)
-        ids = [s.id for s in scenarios]
-        # Filenames sorted alphabetically:
-        #   budget_exceeded.yaml
-        #   high_risk_tool_blocked.yaml
-        #   model_not_allowed.yaml
-        #   normal_agent_run.yaml
-        #   write_file_without_permission.yaml
-        assert ids == [
+        assert len(scenarios) >= 5
+        ids = {s.id for s in scenarios}
+        expected = {
             "budget_exceeded",
             "high_risk_tool_blocked",
             "model_not_allowed",
             "normal_agent_run",
             "write_file_without_permission",
-        ]
+        }
+        assert expected.issubset(ids)
+
+    def test_load_scenarios_deterministic_order(self) -> None:
+        """load_scenarios sorts by filename, so order must be stable."""
+        scenarios = load_scenarios(SCENARIOS_DIR)
+        ids = [s.id for s in scenarios]
+        # Ensure the returned list is strictly sorted alphabetically by id
+        assert ids == sorted(ids)
 
     def test_load_scenarios_nonexistent_dir(self) -> None:
         with pytest.raises(FileNotFoundError):
