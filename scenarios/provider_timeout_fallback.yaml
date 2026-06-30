@@ -1,0 +1,42 @@
+id: provider_timeout_fallback
+name: Provider 超时回退
+description: >
+  FaultInjector 对 primary provider 注入 timeout 故障。
+  Runner 捕获 ProviderTimeoutInjected 后使用 fallback mock responses 继续执行。
+  验证超时被正确检测且 fallback 路径正常工作。
+
+agent_run:
+  model: gpt-4o
+  provider: mock
+  tools:
+    - read_file
+    - search_web
+  max_steps: 5
+  task: "读取配置文件并返回数据库连接信息"
+  mock_responses:
+    - content: "使用 fallback 响应：数据库连接信息为 localhost:5432"
+      finish_reason: stop
+      total_tokens: 100
+
+policy:
+  allowed_models:
+    - gpt-4o
+  max_token_budget: 5000
+  max_tool_risk_level: low
+  require_answer_verification: false
+
+fault_injection:
+  type: timeout
+  target: primary
+  payload:
+    timeout_ms: 5000
+
+expected_failure: provider_timeout
+expected_events:
+  - agent_start
+  - llm_request
+  - fault_injected
+  - llm_request
+  - llm_response
+  - agent_end
+pass_criteria: "Primary provider 超时被 FaultInjector 注入；fallback 响应被使用；最终结果包含 fallback 内容"

@@ -8,8 +8,17 @@ and classifying multi-agent runtime failures.
 
 __version__ = "0.1.0"
 
+from agent_reliability_harness.fault_injector import (
+    FaultInjectionResult,
+    FaultInjector,
+    ProviderTimeoutInjected,
+)
 from agent_reliability_harness.mock_llm import MockLLMProvider, MockLLMResponseExhausted
-from agent_reliability_harness.runner import run_scenario_day2, run_scenario_day3
+from agent_reliability_harness.runner import (
+    run_scenario_day2,
+    run_scenario_day3,
+    run_scenario_day4,
+)
 from agent_reliability_harness.runtime_guard import GuardDecision, RuntimeGuard
 from agent_reliability_harness.spec import (
     AgentRunSpec,
@@ -59,13 +68,19 @@ __all__ = [
     "ToolResult",
     "get_tool",
     "list_tools",
-    # Runner (Day 2 + Day 3)
+    # Runner (Day 2 + Day 3 + Day 4)
     "run_scenario_day2",
     "run_scenario_day3",
+    "run_scenario_day4",
     # RuntimeGuard (Day 3)
     "GuardDecision",
     "RuntimeGuard",
     # ToolFirewall (Day 3)
     "ToolFirewall",
+    # FaultInjector (Day 4)
+    "FaultInjectionResult",
+    "FaultInjector",
+    "ProviderTimeoutInjected",
 ]
+
 

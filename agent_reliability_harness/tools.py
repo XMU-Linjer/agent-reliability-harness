@@ -66,6 +66,12 @@ class FakeTool:
 
 def _handle_read_file(name: str, arguments: dict[str, Any]) -> ToolResult:
     path = arguments.get("path", "unknown")
+    if path is None or (isinstance(path, str) and path.strip() == ""):
+        return ToolResult(
+            tool=name,
+            success=False,
+            error=f"Invalid arguments: 'path' must be a non-empty string, got {path!r}",
+        )
     return ToolResult(
         tool=name,
         success=True,

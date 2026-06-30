@@ -1,0 +1,56 @@
+id: duplicate_tool_execution
+name: 重复工具调用检测
+description: >
+  FaultInjector 在第二步注入一个与第一步完全相同的 tool call（read_file + 相同参数）。
+  Runner 检测到重复调用并报告 duplicate_execution 故障。
+
+agent_run:
+  model: gpt-4o
+  provider: mock
+  tools:
+    - read_file
+    - search_web
+  max_steps: 5
+  task: "读取 config.yaml 并搜索相关文档"
+  mock_responses:
+    - content: "先读取 config.yaml"
+      tool_calls:
+        - tool: read_file
+          arguments:
+            path: config.yaml
+      total_tokens: 100
+    - content: "搜索相关文档"
+      tool_calls:
+        - tool: search_web
+          arguments:
+            query: "config documentation"
+      total_tokens: 120
+    - content: "完成"
+      finish_reason: stop
+      total_tokens: 50
+
+policy:
+  allowed_models:
+    - gpt-4o
+  max_token_budget: 5000
+  max_tool_risk_level: low
+  require_answer_verification: false
+
+fault_injection:
+  type: duplicate
+  target: null
+  payload: {}
+
+expected_failure: duplicate_execution
+expected_events:
+  - agent_start
+  - llm_request
+  - llm_response
+  - tool_call
+  - tool_result
+  - llm_request
+  - llm_response
+  - tool_call
+  - fault_injected
+  - agent_end
+pass_criteria: "FaultInjector 在第二步注入重复的 read_file 调用；Runner 检测到重复并返回 duplicate_execution"
