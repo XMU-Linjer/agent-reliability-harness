@@ -8,6 +8,7 @@ and classifying multi-agent runtime failures.
 
 __version__ = "0.1.0"
 
+from agent_reliability_harness.failure_classifier import FailureClassifier
 from agent_reliability_harness.fault_injector import (
     FaultInjectionResult,
     FaultInjector,
@@ -18,6 +19,7 @@ from agent_reliability_harness.runner import (
     run_scenario_day2,
     run_scenario_day3,
     run_scenario_day4,
+    run_scenario_day5,
 )
 from agent_reliability_harness.runtime_guard import GuardDecision, RuntimeGuard
 from agent_reliability_harness.spec import (
@@ -43,6 +45,7 @@ from agent_reliability_harness.tools import (
     get_tool,
     list_tools,
 )
+from agent_reliability_harness.trace_logger import TraceEventRecord, TraceLogger
 
 __all__ = [
     # Spec (Day 1)
@@ -68,10 +71,11 @@ __all__ = [
     "ToolResult",
     "get_tool",
     "list_tools",
-    # Runner (Day 2 + Day 3 + Day 4)
+    # Runner (Day 2 + Day 3 + Day 4 + Day 5)
     "run_scenario_day2",
     "run_scenario_day3",
     "run_scenario_day4",
+    "run_scenario_day5",
     # RuntimeGuard (Day 3)
     "GuardDecision",
     "RuntimeGuard",
@@ -81,6 +85,8 @@ __all__ = [
     "FaultInjectionResult",
     "FaultInjector",
     "ProviderTimeoutInjected",
+    # TraceLogger + FailureClassifier (Day 5)
+    "TraceEventRecord",
+    "TraceLogger",
+    "FailureClassifier",
 ]
-
-
