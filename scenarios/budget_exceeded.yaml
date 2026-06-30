@@ -1,0 +1,49 @@
+id: budget_exceeded
+name: Token 预算超限
+description: >
+  Agent 的 mock_responses 的 total_tokens 累计超过 PolicySpec.max_token_budget。
+  RuntimeGuard 应在 budget 检查时拦截，返回 deny 决策。
+
+agent_run:
+  model: gpt-4o
+  provider: mock
+  tools:
+    - read_file
+    - search_web
+  max_steps: 5
+  task: "搜索多个来源并汇总信息"
+  mock_responses:
+    - content: "我先搜索第一个来源"
+      tool_calls:
+        - tool: search_web
+          arguments:
+            query: "source 1"
+      total_tokens: 300
+    - content: "我再搜索第二个来源"
+      tool_calls:
+        - tool: search_web
+          arguments:
+            query: "source 2"
+      total_tokens: 400
+    - content: "汇总结果如下"
+      finish_reason: stop
+      total_tokens: 350
+
+policy:
+  allowed_models:
+    - gpt-4o
+  max_token_budget: 500
+  max_tool_risk_level: low
+  require_answer_verification: false
+
+expected_failure: budget_exceeded
+expected_events:
+  - agent_start
+  - llm_request
+  - llm_response
+  - tool_call
+  - tool_result
+  - guard_check
+  - guard_decision
+  - agent_end
+pass_criteria: "RuntimeGuard 在累计 token 超过 500 时拦截，GuardDecision.action = deny，reason 包含 budget 超限信息"
