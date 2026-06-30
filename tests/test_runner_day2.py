@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from agent_reliability_harness.runner import run_scenario_day2
 from agent_reliability_harness.spec import load_scenario
@@ -13,7 +14,7 @@ SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "scenarios"
 class TestRunNormalScenario:
     """Verify the Day 2 runner can execute normal_agent_run end-to-end."""
 
-    def _load_and_run(self) -> dict:
+    def _load_and_run(self) -> dict[str, Any]:
         scenario = load_scenario(SCENARIOS_DIR / "normal_agent_run.yaml")
         return run_scenario_day2(scenario)
 

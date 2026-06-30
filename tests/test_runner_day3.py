@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from agent_reliability_harness.runner import run_scenario_day2, run_scenario_day3
 from agent_reliability_harness.spec import load_scenario
@@ -18,7 +19,7 @@ SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "scenarios"
 class TestNormalAgentRunDay3:
     """normal_agent_run should complete successfully with Day 3 runner."""
 
-    def _run(self) -> dict:
+    def _run(self) -> dict[str, Any]:
         scenario = load_scenario(SCENARIOS_DIR / "normal_agent_run.yaml")
         return run_scenario_day3(scenario)
 
@@ -53,7 +54,7 @@ class TestNormalAgentRunDay3:
 class TestModelNotAllowedDay3:
     """model_not_allowed should be blocked by RuntimeGuard.check_model."""
 
-    def _run(self) -> dict:
+    def _run(self) -> dict[str, Any]:
         scenario = load_scenario(SCENARIOS_DIR / "model_not_allowed.yaml")
         return run_scenario_day3(scenario)
 
@@ -90,7 +91,7 @@ class TestModelNotAllowedDay3:
 class TestBudgetExceededDay3:
     """budget_exceeded should be blocked by RuntimeGuard.check_budget."""
 
-    def _run(self) -> dict:
+    def _run(self) -> dict[str, Any]:
         scenario = load_scenario(SCENARIOS_DIR / "budget_exceeded.yaml")
         return run_scenario_day3(scenario)
 
@@ -124,7 +125,7 @@ class TestBudgetExceededDay3:
 class TestHighRiskToolBlockedDay3:
     """high_risk_tool_blocked should be blocked by ToolFirewall risk check."""
 
-    def _run(self) -> dict:
+    def _run(self) -> dict[str, Any]:
         scenario = load_scenario(SCENARIOS_DIR / "high_risk_tool_blocked.yaml")
         return run_scenario_day3(scenario)
 
@@ -158,7 +159,7 @@ class TestHighRiskToolBlockedDay3:
 class TestWriteFileWithoutPermissionDay3:
     """write_file_without_permission should be blocked by ToolFirewall allowed_tools."""
 
-    def _run(self) -> dict:
+    def _run(self) -> dict[str, Any]:
         scenario = load_scenario(SCENARIOS_DIR / "write_file_without_permission.yaml")
         return run_scenario_day3(scenario)
 

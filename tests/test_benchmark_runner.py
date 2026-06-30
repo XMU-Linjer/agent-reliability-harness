@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
 from agent_reliability_harness.benchmark_runner import BenchmarkRunner, BenchmarkRunResult
@@ -13,7 +14,7 @@ from agent_reliability_harness.runner import (
     run_scenario_day4,
     run_scenario_day5,
 )
-from agent_reliability_harness.spec import load_scenario
+from agent_reliability_harness.spec import ScenarioSpec, load_scenario
 
 SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "scenarios"
 
@@ -80,15 +81,18 @@ class TestTraceFiles:
         runner = BenchmarkRunner(SCENARIOS_DIR, tmp_path)
         result = runner.run()
         for r in result.results:
-            assert r["trace_file"] is not None
-            trace = Path(r["trace_file"])
+            trace_file = r["trace_file"]
+            assert trace_file is not None
+            trace = Path(trace_file)
             assert trace.exists(), f"Missing trace for {r['scenario_id']}"
 
     def test_trace_contains_agent_start_and_end(self, tmp_path: Path) -> None:
         runner = BenchmarkRunner(SCENARIOS_DIR, tmp_path)
         result = runner.run()
         for r in result.results:
-            trace = Path(r["trace_file"])
+            trace_file = r["trace_file"]
+            assert isinstance(trace_file, str)
+            trace = Path(trace_file)
             with trace.open("r", encoding="utf-8") as f:
                 event_types = [json.loads(line)["event_type"] for line in f]
             assert "agent_start" in event_types, f"No agent_start in {r['scenario_id']}"
@@ -106,13 +110,16 @@ class TestScorecard:
     def test_scorecard_file_created(self, tmp_path: Path) -> None:
         runner = BenchmarkRunner(SCENARIOS_DIR, tmp_path)
         result = runner.run()
-        assert result.scorecard_file is not None
-        assert Path(result.scorecard_file).exists()
+        scorecard_file = result.scorecard_file
+        assert scorecard_file is not None
+        assert Path(scorecard_file).exists()
 
     def test_scorecard_json_parseable(self, tmp_path: Path) -> None:
         runner = BenchmarkRunner(SCENARIOS_DIR, tmp_path)
         result = runner.run()
-        with open(result.scorecard_file, "r", encoding="utf-8") as f:
+        scorecard_file = result.scorecard_file
+        assert scorecard_file is not None
+        with open(scorecard_file, "r", encoding="utf-8") as f:
             sc = json.load(f)
         assert sc["scenarios_total"] == 10
         assert sc["pass_rate"] == 1.0
@@ -120,7 +127,9 @@ class TestScorecard:
     def test_scorecard_has_failure_type_counts(self, tmp_path: Path) -> None:
         runner = BenchmarkRunner(SCENARIOS_DIR, tmp_path)
         result = runner.run()
-        with open(result.scorecard_file, "r", encoding="utf-8") as f:
+        scorecard_file = result.scorecard_file
+        assert scorecard_file is not None
+        with open(scorecard_file, "r", encoding="utf-8") as f:
             sc = json.load(f)
         assert "failure_type_counts" in sc
         assert isinstance(sc["failure_type_counts"], dict)
@@ -128,7 +137,9 @@ class TestScorecard:
     def test_scorecard_has_status_counts(self, tmp_path: Path) -> None:
         runner = BenchmarkRunner(SCENARIOS_DIR, tmp_path)
         result = runner.run()
-        with open(result.scorecard_file, "r", encoding="utf-8") as f:
+        scorecard_file = result.scorecard_file
+        assert scorecard_file is not None
+        with open(scorecard_file, "r", encoding="utf-8") as f:
             sc = json.load(f)
         assert "status_counts" in sc
         assert isinstance(sc["status_counts"], dict)
@@ -136,7 +147,9 @@ class TestScorecard:
     def test_scorecard_has_results_list(self, tmp_path: Path) -> None:
         runner = BenchmarkRunner(SCENARIOS_DIR, tmp_path)
         result = runner.run()
-        with open(result.scorecard_file, "r", encoding="utf-8") as f:
+        scorecard_file = result.scorecard_file
+        assert scorecard_file is not None
+        with open(scorecard_file, "r", encoding="utf-8") as f:
             sc = json.load(f)
         assert len(sc["results"]) == 10
 
@@ -153,7 +166,10 @@ class TestErrorResilience:
         """Patch run_scenario_day5 to throw on one specific scenario."""
         original = run_scenario_day5
 
-        def _patched(scenario, output_dir=None):
+        def _patched(
+            scenario: ScenarioSpec,
+            output_dir: str | Path | None = None,
+        ) -> dict[str, Any]:
             if scenario.id == "normal_agent_run":
                 raise RuntimeError("Simulated crash")
             return original(scenario, output_dir=output_dir)
@@ -175,7 +191,10 @@ class TestErrorResilience:
     def test_error_result_has_error_field(self, tmp_path: Path) -> None:
         original = run_scenario_day5
 
-        def _patched(scenario, output_dir=None):
+        def _patched(
+            scenario: ScenarioSpec,
+            output_dir: str | Path | None = None,
+        ) -> dict[str, Any]:
             if scenario.id == "budget_exceeded":
                 raise ValueError("Something went wrong")
             return original(scenario, output_dir=output_dir)
@@ -228,7 +247,9 @@ class TestOutputStructure:
     def test_scorecard_in_run_dir(self, tmp_path: Path) -> None:
         runner = BenchmarkRunner(SCENARIOS_DIR, tmp_path, run_id="test-run")
         result = runner.run()
-        sc_path = Path(result.scorecard_file)
+        scorecard_file = result.scorecard_file
+        assert scorecard_file is not None
+        sc_path = Path(scorecard_file)
         assert sc_path.parent.name == "test-run"
         assert sc_path.name == "scorecard.json"
 
@@ -236,7 +257,9 @@ class TestOutputStructure:
         runner = BenchmarkRunner(SCENARIOS_DIR, tmp_path, run_id="test-run")
         result = runner.run()
         for r in result.results:
-            trace = Path(r["trace_file"])
+            trace_file = r["trace_file"]
+            assert isinstance(trace_file, str)
+            trace = Path(trace_file)
             # trace should be at: tmp_path / test-run / <scenario_id> / trace.jsonl
             assert trace.parent.name == r["scenario_id"]
             assert trace.name == "trace.jsonl"

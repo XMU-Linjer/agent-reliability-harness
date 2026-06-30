@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 from agent_reliability_harness.runner import (
     run_scenario_day2,
@@ -21,15 +22,16 @@ SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "scenarios"
 # ---------------------------------------------------------------------------
 
 
-def _run(name: str, tmp_path: Path) -> dict:
+def _run(name: str, tmp_path: Path) -> dict[str, Any]:
     scenario = load_scenario(SCENARIOS_DIR / name)
     return run_scenario_day5(scenario, output_dir=tmp_path)
 
 
-def _assert_trace_basics(result: dict, tmp_path: Path) -> None:
+def _assert_trace_basics(result: dict[str, Any], tmp_path: Path) -> None:
     """Every scenario must produce a trace file with agent_start + agent_end."""
-    assert result["trace_file"] is not None
-    trace_path = Path(result["trace_file"])
+    trace_file = result["trace_file"]
+    assert isinstance(trace_file, str)
+    trace_path = Path(trace_file)
     assert trace_path.exists()
     with trace_path.open("r", encoding="utf-8") as f:
         lines = f.readlines()
@@ -286,7 +288,9 @@ class TestTraceContent:
         ]
         for sf in scenario_files:
             result = _run(sf, tmp_path)
-            trace_path = Path(result["trace_file"])
+            trace_file = result["trace_file"]
+            assert isinstance(trace_file, str)
+            trace_path = Path(trace_file)
             with trace_path.open("r", encoding="utf-8") as f:
                 for line in f:
                     parsed = json.loads(line)
@@ -294,7 +298,9 @@ class TestTraceContent:
 
     def test_normal_run_has_llm_events(self, tmp_path: Path) -> None:
         result = _run("normal_agent_run.yaml", tmp_path)
-        trace_path = Path(result["trace_file"])
+        trace_file = result["trace_file"]
+        assert isinstance(trace_file, str)
+        trace_path = Path(trace_file)
         with trace_path.open("r", encoding="utf-8") as f:
             event_types = [json.loads(line)["event_type"] for line in f]
         assert "llm_request" in event_types
@@ -356,5 +362,7 @@ class TestNoRealSideEffects:
     def test_trace_only_in_output_dir(self, tmp_path: Path) -> None:
         """Trace files should only appear under the specified output_dir."""
         result = _run("normal_agent_run.yaml", tmp_path)
-        trace_path = Path(result["trace_file"])
+        trace_file = result["trace_file"]
+        assert isinstance(trace_file, str)
+        trace_path = Path(trace_file)
         assert str(trace_path).startswith(str(tmp_path))

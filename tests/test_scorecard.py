@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 from agent_reliability_harness.scorecard import ScorecardGenerator
 
@@ -13,7 +14,7 @@ from agent_reliability_harness.scorecard import ScorecardGenerator
 # ---------------------------------------------------------------------------
 
 
-def _make_results() -> list[dict]:
+def _make_results() -> list[dict[str, Any]]:
     """Build a representative set of scenario results."""
     return [
         {"scenario_id": "normal_agent_run", "status": "passed", "failure_type": "none",
@@ -29,7 +30,7 @@ def _make_results() -> list[dict]:
     ]
 
 
-def _make_mixed_results() -> list[dict]:
+def _make_mixed_results() -> list[dict[str, Any]]:
     """Results with some failures (passed=False)."""
     return [
         {"scenario_id": "s1", "status": "passed", "failure_type": "none",

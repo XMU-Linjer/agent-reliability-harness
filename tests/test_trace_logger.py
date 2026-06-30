@@ -217,11 +217,15 @@ class TestNoDatabase:
 
     def test_no_sqlite_import(self) -> None:
         import agent_reliability_harness.trace_logger as mod
-        source = Path(mod.__file__).read_text(encoding="utf-8")
+        mod_file = mod.__file__
+        assert mod_file is not None
+        source = Path(mod_file).read_text(encoding="utf-8")
         assert "sqlite" not in source.lower()
         assert "database" not in source.lower()
 
     def test_no_sqlalchemy_import(self) -> None:
         import agent_reliability_harness.trace_logger as mod
-        source = Path(mod.__file__).read_text(encoding="utf-8")
+        mod_file = mod.__file__
+        assert mod_file is not None
+        source = Path(mod_file).read_text(encoding="utf-8")
         assert "sqlalchemy" not in source.lower()

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from agent_reliability_harness.failure_classifier import FailureClassifier
 from agent_reliability_harness.spec import EventType, FailureType
 from agent_reliability_harness.trace_logger import TraceEventRecord
@@ -9,7 +11,7 @@ from agent_reliability_harness.trace_logger import TraceEventRecord
 
 def _evt(
     event_type: EventType,
-    data: dict | None = None,
+    data: dict[str, Any] | None = None,
     error: str | None = None,
     step: int = 0,
     scenario_id: str = "test_scenario",

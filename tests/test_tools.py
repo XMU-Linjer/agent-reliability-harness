@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from agent_reliability_harness.spec import ToolRiskLevel
@@ -67,37 +69,46 @@ class TestFakeToolExecution:
         assert isinstance(result, ToolResult)
         assert result.success is True
         assert result.tool == "read_file"
-        assert "[mock]" in result.output
+        output = result.output
+        assert isinstance(output, str)
+        assert "[mock]" in output
         # Must NOT actually read /etc/passwd
-        assert "root:" not in str(result.output)
+        assert "root:" not in output
 
     def test_search_web_returns_mock_results(self) -> None:
         tool = get_tool("search_web")
         result = tool.execute({"query": "python testing"})
         assert result.success is True
-        assert "[mock]" in result.output
+        output = result.output
+        assert isinstance(output, str)
+        assert "[mock]" in output
 
-    def test_write_file_does_not_create_real_file(self, tmp_path: object) -> None:
+    def test_write_file_does_not_create_real_file(self) -> None:
         tool = get_tool("write_file")
         fake_path = "d:/this_should_not_exist_day2_test.txt"
         result = tool.execute({"path": fake_path, "content": "hello"})
         assert result.success is True
-        assert "would_write" in result.output
+        output = result.output
+        assert isinstance(output, str)
+        assert "would_write" in output
         # The file must NOT actually exist
-        from pathlib import Path
         assert not Path(fake_path).exists()
 
     def test_send_email_does_not_send(self) -> None:
         tool = get_tool("send_email")
         result = tool.execute({"to": "test@example.com", "subject": "hi"})
         assert result.success is True
-        assert "would_send" in result.output
+        output = result.output
+        assert isinstance(output, str)
+        assert "would_send" in output
 
     def test_execute_shell_does_not_execute(self) -> None:
         tool = get_tool("execute_shell")
         result = tool.execute({"command": "rm -rf /"})
         assert result.success is True
-        assert "would_execute" in result.output
+        output = result.output
+        assert isinstance(output, str)
+        assert "would_execute" in output
 
     def test_tool_result_has_no_error_on_success(self) -> None:
         tool = get_tool("read_file")

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from agent_reliability_harness.runner import (
     run_scenario_day2,
@@ -22,7 +23,7 @@ SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "scenarios"
 class TestProviderTimeoutFallback:
     """provider_timeout_fallback should detect timeout and use fallback."""
 
-    def _run(self) -> dict:
+    def _run(self) -> dict[str, Any]:
         scenario = load_scenario(SCENARIOS_DIR / "provider_timeout_fallback.yaml")
         return run_scenario_day4(scenario)
 
@@ -61,7 +62,7 @@ class TestProviderTimeoutFallback:
 class TestBadToolArguments:
     """bad_tool_arguments should detect corrupted arguments."""
 
-    def _run(self) -> dict:
+    def _run(self) -> dict[str, Any]:
         scenario = load_scenario(SCENARIOS_DIR / "bad_tool_arguments.yaml")
         return run_scenario_day4(scenario)
 
@@ -102,7 +103,7 @@ class TestBadToolArguments:
 class TestDuplicateToolExecution:
     """duplicate_tool_execution should detect duplicated tool calls."""
 
-    def _run(self) -> dict:
+    def _run(self) -> dict[str, Any]:
         scenario = load_scenario(SCENARIOS_DIR / "duplicate_tool_execution.yaml")
         return run_scenario_day4(scenario)
 
@@ -135,7 +136,7 @@ class TestDuplicateToolExecution:
 class TestPromptInjectionToolEscalation:
     """prompt_injection should escalate tool and be blocked by ToolFirewall."""
 
-    def _run(self) -> dict:
+    def _run(self) -> dict[str, Any]:
         scenario = load_scenario(
             SCENARIOS_DIR / "prompt_injection_tool_escalation.yaml"
         )

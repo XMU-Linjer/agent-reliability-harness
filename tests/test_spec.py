@@ -1,6 +1,7 @@
 """Tests for agent_reliability_harness.spec — Day 1 coverage."""
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 from pydantic import ValidationError
@@ -151,8 +152,8 @@ class TestEnumParsing:
 class TestValidation:
     """Test Pydantic validation rules on spec models."""
 
-    def _minimal_policy(self, **overrides: object) -> dict:
-        base = {
+    def _minimal_policy(self, **overrides: object) -> dict[str, Any]:
+        base: dict[str, Any] = {
             "allowed_models": ["gpt-4o"],
             "max_token_budget": 1000,
             "max_tool_risk_level": "low",
@@ -160,8 +161,8 @@ class TestValidation:
         base.update(overrides)
         return base
 
-    def _minimal_agent_run(self, **overrides: object) -> dict:
-        base = {
+    def _minimal_agent_run(self, **overrides: object) -> dict[str, Any]:
+        base: dict[str, Any] = {
             "model": "gpt-4o",
             "tools": ["read_file"],
             "max_steps": 3,
