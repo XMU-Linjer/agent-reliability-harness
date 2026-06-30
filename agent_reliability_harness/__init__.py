@@ -8,6 +8,7 @@ and classifying multi-agent runtime failures.
 
 __version__ = "0.1.0"
 
+from agent_reliability_harness.benchmark_runner import BenchmarkRunner, BenchmarkRunResult
 from agent_reliability_harness.failure_classifier import FailureClassifier
 from agent_reliability_harness.fault_injector import (
     FaultInjectionResult,
@@ -22,6 +23,7 @@ from agent_reliability_harness.runner import (
     run_scenario_day5,
 )
 from agent_reliability_harness.runtime_guard import GuardDecision, RuntimeGuard
+from agent_reliability_harness.scorecard import ScorecardGenerator
 from agent_reliability_harness.spec import (
     AgentRunSpec,
     EventType,
@@ -89,4 +91,8 @@ __all__ = [
     "TraceEventRecord",
     "TraceLogger",
     "FailureClassifier",
+    # BenchmarkRunner + ScorecardGenerator (Day 6)
+    "BenchmarkRunner",
+    "BenchmarkRunResult",
+    "ScorecardGenerator",
 ]
