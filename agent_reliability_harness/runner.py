@@ -13,6 +13,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 
+from agent_reliability_harness.argument_guard import ArgumentGuard
 from agent_reliability_harness.failure_classifier import FailureClassifier
 from agent_reliability_harness.fault_injector import (
     FaultInjectionResult,
@@ -502,6 +503,7 @@ def run_scenario_day5(
 
     guard = RuntimeGuard()
     firewall = ToolFirewall()
+    argument_guard = ArgumentGuard()
     injector = FaultInjector(scenario.fault_injection)
     policy = scenario.policy
 
@@ -683,6 +685,35 @@ def run_scenario_day5(
                 _emit(EventType.agent_end, "runner", {"status": "blocked"})
                 return _finalise(logger, scenario, run_id, "blocked", trace_path)
 
+            _emit(EventType.argument_guard_check, "argument_guard", {
+                "tool": tc.tool,
+                "arguments": tc.arguments,
+                "attack_payload": tc.arguments.get("path"),
+            })
+
+            arg_decision = argument_guard.check_tool_call(tc.tool, tc.arguments)
+            _emit(EventType.argument_guard_decision, "argument_guard", {
+                "action": arg_decision.action.value,
+                "tool": arg_decision.tool_name,
+                "check_type": arg_decision.check_type,
+                "reason": arg_decision.reason,
+                "reason_zh": arg_decision.reason_zh,
+                "reason_en": arg_decision.reason_en,
+                "attack_payload": arg_decision.evidence.get("attack_payload"),
+                "evidence": arg_decision.evidence,
+            })
+
+            if arg_decision.action == GuardAction.deny:
+                _emit(EventType.tool_execution_skipped, "runner", {
+                    "tool": tc.tool,
+                    "reason": arg_decision.reason,
+                    "reason_zh": arg_decision.reason_zh,
+                    "reason_en": arg_decision.reason_en,
+                    "attack_payload": arg_decision.evidence.get("attack_payload"),
+                })
+                _emit(EventType.agent_end, "runner", {"status": "blocked"})
+                return _finalise(logger, scenario, run_id, "blocked", trace_path)
+
             # execute fake tool
             tool_impl = get_tool(tc.tool)
             result: ToolResult = tool_impl.execute(tc.arguments)
@@ -766,7 +797,7 @@ def _finalise(
 
     passed = failure_type.value == scenario.expected_failure.value
 
-    return {
+    result = {
         "scenario_id": scenario.id,
         "status": status,
         "expected_failure": scenario.expected_failure.value,
@@ -775,3 +806,46 @@ def _finalise(
         "trace_file": trace_file,
         "events_count": len(events),
     }
+    result.update(_extract_security_evidence(events))
+    return result
+
+
+def _extract_security_evidence(events: list[TraceEventRecord]) -> dict[str, Any]:
+    """Extract denial evidence for terminal alerts and reports."""
+    for ev in events:
+        if ev.event_type == EventType.argument_guard_decision:
+            if ev.data.get("action") == GuardAction.deny.value:
+                return {
+                    "blocked_by": "argument_guard",
+                    "reason": ev.data.get("reason", ""),
+                    "reason_zh": ev.data.get("reason_zh", ""),
+                    "reason_en": ev.data.get("reason_en", ""),
+                    "attack_payload": ev.data.get("attack_payload", ""),
+                    "tool": ev.data.get("tool", ""),
+                }
+
+    for ev in events:
+        if ev.event_type == EventType.firewall_decision:
+            if ev.data.get("action") == GuardAction.deny.value:
+                return {
+                    "blocked_by": "tool_firewall",
+                    "reason": ev.data.get("check_type", ""),
+                    "reason_zh": ev.data.get("reason", ""),
+                    "reason_en": ev.data.get("reason", ""),
+                    "attack_payload": "",
+                    "tool": ev.data.get("tool", ""),
+                }
+
+    for ev in events:
+        if ev.event_type == EventType.guard_decision:
+            if ev.data.get("action") == GuardAction.deny.value:
+                return {
+                    "blocked_by": "runtime_guard",
+                    "reason": ev.data.get("check_type", ""),
+                    "reason_zh": ev.data.get("reason", ""),
+                    "reason_en": ev.data.get("reason", ""),
+                    "attack_payload": "",
+                    "tool": "",
+                }
+
+    return {}

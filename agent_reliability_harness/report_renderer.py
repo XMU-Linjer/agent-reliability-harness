@@ -87,6 +87,102 @@ class ReportRenderer:
         path.write_text(self.render_markdown(scorecard), encoding="utf-8")
         return path
 
+    def render_zh_markdown(self, scorecard: dict[str, Any]) -> str:
+        """Render a Chinese attack-defense report."""
+        lines = [
+            "# Agent 可靠性攻防模拟报告",
+            "",
+            "## 汇总",
+            "",
+            "| 指标 | 值 |",
+            "|---|---:|",
+            f"| run_id | {self._cell(scorecard.get('run_id', 'unknown'))} |",
+            f"| 场景总数 | {self._cell(scorecard.get('scenarios_total', 0))} |",
+            f"| 验收通过 | {self._cell(scorecard.get('scenarios_passed', 0))} |",
+            f"| 验收失败 | {self._cell(scorecard.get('scenarios_failed', 0))} |",
+            f"| 通过率 | {self._format_pass_rate(scorecard.get('pass_rate', 0.0))} |",
+            "",
+            "## 安全告警",
+            "",
+            "| case_id | 攻击模拟 | 工具 | payload | 防护模块 | 拦截原因 | failure_type | trace_file |",
+            "|---|---|---|---|---|---|---|---|",
+        ]
+        results = self._as_results(scorecard.get("results", []))
+        alert_results = [result for result in results if self._is_security_event(result)]
+        if not alert_results:
+            lines.append("| none | 无安全告警 |  |  |  |  | none |  |")
+        for result in alert_results:
+            case_id, attack_zh, _attack_en = self._case_labels(result)
+            reason = result.get("reason_zh") or result.get("reason") or ""
+            lines.append(
+                "| "
+                f"{self._cell(case_id)} | "
+                f"{self._cell(attack_zh)} | "
+                f"{self._cell(result.get('tool', ''))} | "
+                f"{self._cell(result.get('attack_payload', ''))} | "
+                f"{self._cell(result.get('blocked_by', ''))} | "
+                f"{self._cell(reason)} | "
+                f"{self._cell(result.get('failure_type', 'unknown'))} | "
+                f"{self._cell(result.get('trace_file', ''))} |"
+            )
+        lines.extend(self._boundaries_zh())
+        return "\n".join(lines)
+
+    def render_en_markdown(self, scorecard: dict[str, Any]) -> str:
+        """Render an English attack-defense report."""
+        lines = [
+            "# Agent Reliability Attack-Defense Report",
+            "",
+            "## Summary",
+            "",
+            "| Metric | Value |",
+            "|---|---:|",
+            f"| run_id | {self._cell(scorecard.get('run_id', 'unknown'))} |",
+            f"| scenarios_total | {self._cell(scorecard.get('scenarios_total', 0))} |",
+            f"| scenarios_passed | {self._cell(scorecard.get('scenarios_passed', 0))} |",
+            f"| scenarios_failed | {self._cell(scorecard.get('scenarios_failed', 0))} |",
+            f"| pass_rate | {self._format_pass_rate(scorecard.get('pass_rate', 0.0))} |",
+            "",
+            "## Security Alerts",
+            "",
+            "| case_id | attack_simulation | tool | payload | blocked_by | reason | failure_type | trace_file |",
+            "|---|---|---|---|---|---|---|---|",
+        ]
+        results = self._as_results(scorecard.get("results", []))
+        alert_results = [result for result in results if self._is_security_event(result)]
+        if not alert_results:
+            lines.append("| none | no security alerts |  |  |  |  | none |  |")
+        for result in alert_results:
+            case_id, _attack_zh, attack_en = self._case_labels(result)
+            reason = result.get("reason_en") or result.get("reason") or ""
+            lines.append(
+                "| "
+                f"{self._cell(case_id)} | "
+                f"{self._cell(attack_en)} | "
+                f"{self._cell(result.get('tool', ''))} | "
+                f"{self._cell(result.get('attack_payload', ''))} | "
+                f"{self._cell(result.get('blocked_by', ''))} | "
+                f"{self._cell(reason)} | "
+                f"{self._cell(result.get('failure_type', 'unknown'))} | "
+                f"{self._cell(result.get('trace_file', ''))} |"
+            )
+        lines.extend(self._boundaries_en())
+        return "\n".join(lines)
+
+    def write_zh_markdown(self, scorecard: dict[str, Any], output_path: str | Path) -> Path:
+        """Write the Chinese report and return the path."""
+        path = Path(output_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(self.render_zh_markdown(scorecard), encoding="utf-8")
+        return path
+
+    def write_en_markdown(self, scorecard: dict[str, Any], output_path: str | Path) -> Path:
+        """Write the English report and return the path."""
+        path = Path(output_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(self.render_en_markdown(scorecard), encoding="utf-8")
+        return path
+
     def render_from_file(self, scorecard_file: str | Path, output_path: str | Path) -> Path:
         """Read scorecard JSON from disk and write a Markdown report."""
         with Path(scorecard_file).open("r", encoding="utf-8") as f:
@@ -118,6 +214,66 @@ class ReportRenderer:
         if isinstance(value, int | float):
             return f"{float(value):.4f}"
         return self._cell(value)
+
+    def _is_security_event(self, result: dict[str, Any]) -> bool:
+        return (
+            result.get("failure_type") != "none"
+            or result.get("status") in ("blocked", "failed", "recovered", "error")
+            or bool(result.get("blocked_by"))
+            or bool(result.get("attack_payload"))
+        )
+
+    def _case_labels(self, result: dict[str, Any]) -> tuple[str, str, str]:
+        scenario_id = str(result.get("scenario_id", "unknown"))
+        labels = {
+            "ad_01_path_traversal_read_attempt": (
+                "AD-01",
+                "路径穿越读取",
+                "Path traversal read attempt",
+            ),
+            "ad_02_linux_sensitive_path_read_attempt": (
+                "AD-02",
+                "Linux 敏感路径读取",
+                "Linux sensitive path read attempt",
+            ),
+            "ad_03_windows_sensitive_path_read_attempt": (
+                "AD-03",
+                "Windows 敏感路径读取",
+                "Windows sensitive path read attempt",
+            ),
+            "ad_04_outside_project_read_attempt": (
+                "AD-04",
+                "项目目录外读取",
+                "Outside workspace read attempt",
+            ),
+        }
+        return labels.get(scenario_id, (scenario_id, scenario_id, scenario_id))
+
+    def _boundaries_zh(self) -> list[str]:
+        return [
+            "",
+            "## 安全边界",
+            "",
+            "- payload 是惰性字符串",
+            "- 不真实读取系统文件",
+            "- 不真实执行 shell",
+            "- 不真实联网",
+            "- 危险路径会在 FakeTool 执行前被拦截",
+            "",
+        ]
+
+    def _boundaries_en(self) -> list[str]:
+        return [
+            "",
+            "## Safety Boundaries",
+            "",
+            "- Payloads are inert strings",
+            "- No real system file reads",
+            "- No real shell execution",
+            "- No real network calls",
+            "- Dangerous paths are blocked before FakeTool execution",
+            "",
+        ]
 
     def _cell(self, value: Any) -> str:
         text = "" if value is None else str(value)

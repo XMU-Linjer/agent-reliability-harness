@@ -8,6 +8,10 @@ and classifying multi-agent runtime failures.
 
 __version__ = "0.1.0"
 
+from agent_reliability_harness.argument_guard import (
+    ArgumentGuard,
+    ArgumentGuardDecision,
+)
 from agent_reliability_harness.benchmark_runner import BenchmarkRunner, BenchmarkRunResult
 from agent_reliability_harness.failure_classifier import FailureClassifier
 from agent_reliability_harness.fault_injector import (
@@ -84,6 +88,9 @@ __all__ = [
     "RuntimeGuard",
     # ToolFirewall (Day 3)
     "ToolFirewall",
+    # ArgumentGuard (file-read attack simulations)
+    "ArgumentGuard",
+    "ArgumentGuardDecision",
     # FaultInjector (Day 4)
     "FaultInjectionResult",
     "FaultInjector",

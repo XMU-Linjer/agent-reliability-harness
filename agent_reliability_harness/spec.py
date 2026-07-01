@@ -50,6 +50,9 @@ class EventType(str, Enum):
     guard_decision = "guard_decision"
     firewall_check = "firewall_check"
     firewall_decision = "firewall_decision"
+    argument_guard_check = "argument_guard_check"
+    argument_guard_decision = "argument_guard_decision"
+    tool_execution_skipped = "tool_execution_skipped"
     fault_injected = "fault_injected"
     failure_classified = "failure_classified"
 
