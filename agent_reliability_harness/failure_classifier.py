@@ -53,6 +53,9 @@ class FailureClassifier:
                     "path_traversal",
                     "sensitive_path",
                     "windows_sensitive_path",
+                    "windows_system_write",
+                    "linux_system_write",
+                    "script_file_write",
                 ):
                     return FailureType.permission_denied
 

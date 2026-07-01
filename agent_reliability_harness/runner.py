@@ -799,6 +799,7 @@ def _finalise(
 
     result = {
         "scenario_id": scenario.id,
+        "case_id": _case_id_from_scenario_id(scenario.id),
         "status": status,
         "expected_failure": scenario.expected_failure.value,
         "failure_type": failure_type.value,
@@ -808,6 +809,13 @@ def _finalise(
     }
     result.update(_extract_security_evidence(events))
     return result
+
+
+def _case_id_from_scenario_id(scenario_id: str) -> str:
+    prefix = scenario_id.split("_", 2)[:2]
+    if len(prefix) == 2 and prefix[0] == "ad" and prefix[1].isdigit():
+        return f"AD-{prefix[1]}"
+    return scenario_id
 
 
 def _extract_security_evidence(events: list[TraceEventRecord]) -> dict[str, Any]:

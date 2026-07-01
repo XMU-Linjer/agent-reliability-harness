@@ -189,6 +189,26 @@ def _case_labels(result: dict[str, Any]) -> tuple[str, str, str]:
             "项目目录外读取",
             "Outside workspace read attempt",
         ),
+        "ad_05_windows_system_path_write_attempt": (
+            "AD-05",
+            "写 Windows 系统路径",
+            "Windows system path write attempt",
+        ),
+        "ad_06_linux_system_path_write_attempt": (
+            "AD-06",
+            "写 Linux 系统路径",
+            "Linux system path write attempt",
+        ),
+        "ad_07_script_file_write_attempt": (
+            "AD-07",
+            "写脚本文件",
+            "Script file write attempt",
+        ),
+        "ad_08_path_traversal_write_attempt": (
+            "AD-08",
+            "目录穿越写文件",
+            "Directory traversal write attempt",
+        ),
     }
     return labels.get(scenario_id, (scenario_id, scenario_id, scenario_id))
 

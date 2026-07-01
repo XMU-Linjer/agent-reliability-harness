@@ -1,7 +1,7 @@
 """
 Markdown report renderer for AgentReliabilityHarness.
 
-Generates a stable, human-readable Markdown report from a scorecard dict.
+Generates stable Markdown reports from scorecard dicts.
 No HTML, templates, charts, dashboards, network calls, or external services.
 """
 
@@ -16,7 +16,7 @@ class ReportRenderer:
     """Render benchmark scorecards as Markdown."""
 
     def render_markdown(self, scorecard: dict[str, Any]) -> str:
-        """Render a scorecard dict to a stable Markdown string."""
+        """Render the original English benchmark report."""
         lines: list[str] = [
             "# Agent Reliability Benchmark Report",
             "",
@@ -80,13 +80,6 @@ class ReportRenderer:
         ])
         return "\n".join(lines)
 
-    def write_markdown(self, scorecard: dict[str, Any], output_path: str | Path) -> Path:
-        """Write a Markdown report and return the written path."""
-        path = Path(output_path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(self.render_markdown(scorecard), encoding="utf-8")
-        return path
-
     def render_zh_markdown(self, scorecard: dict[str, Any]) -> str:
         """Render a Chinese attack-defense report."""
         lines = [
@@ -107,8 +100,11 @@ class ReportRenderer:
             "| case_id | 攻击模拟 | 工具 | payload | 防护模块 | 拦截原因 | failure_type | trace_file |",
             "|---|---|---|---|---|---|---|---|",
         ]
-        results = self._as_results(scorecard.get("results", []))
-        alert_results = [result for result in results if self._is_security_event(result)]
+        alert_results = [
+            result
+            for result in self._as_results(scorecard.get("results", []))
+            if self._is_security_event(result)
+        ]
         if not alert_results:
             lines.append("| none | 无安全告警 |  |  |  |  | none |  |")
         for result in alert_results:
@@ -148,8 +144,11 @@ class ReportRenderer:
             "| case_id | attack_simulation | tool | payload | blocked_by | reason | failure_type | trace_file |",
             "|---|---|---|---|---|---|---|---|",
         ]
-        results = self._as_results(scorecard.get("results", []))
-        alert_results = [result for result in results if self._is_security_event(result)]
+        alert_results = [
+            result
+            for result in self._as_results(scorecard.get("results", []))
+            if self._is_security_event(result)
+        ]
         if not alert_results:
             lines.append("| none | no security alerts |  |  |  |  | none |  |")
         for result in alert_results:
@@ -169,6 +168,13 @@ class ReportRenderer:
         lines.extend(self._boundaries_en())
         return "\n".join(lines)
 
+    def write_markdown(self, scorecard: dict[str, Any], output_path: str | Path) -> Path:
+        """Write the original English benchmark report and return the path."""
+        path = Path(output_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(self.render_markdown(scorecard), encoding="utf-8")
+        return path
+
     def write_zh_markdown(self, scorecard: dict[str, Any], output_path: str | Path) -> Path:
         """Write the Chinese report and return the path."""
         path = Path(output_path)
@@ -177,14 +183,14 @@ class ReportRenderer:
         return path
 
     def write_en_markdown(self, scorecard: dict[str, Any], output_path: str | Path) -> Path:
-        """Write the English report and return the path."""
+        """Write the English attack-defense report and return the path."""
         path = Path(output_path)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(self.render_en_markdown(scorecard), encoding="utf-8")
         return path
 
     def render_from_file(self, scorecard_file: str | Path, output_path: str | Path) -> Path:
-        """Read scorecard JSON from disk and write a Markdown report."""
+        """Read scorecard JSON from disk and write the original report."""
         with Path(scorecard_file).open("r", encoding="utf-8") as f:
             scorecard = json.load(f)
         if not isinstance(scorecard, dict):
@@ -199,11 +205,7 @@ class ReportRenderer:
     def _as_count_dict(self, value: Any) -> dict[str, int]:
         if not isinstance(value, dict):
             return {}
-        counts: dict[str, int] = {}
-        for key, count in value.items():
-            if isinstance(count, int):
-                counts[str(key)] = count
-        return counts
+        return {str(key): count for key, count in value.items() if isinstance(count, int)}
 
     def _as_results(self, value: Any) -> list[dict[str, Any]]:
         if not isinstance(value, list):
@@ -246,6 +248,26 @@ class ReportRenderer:
                 "项目目录外读取",
                 "Outside workspace read attempt",
             ),
+            "ad_05_windows_system_path_write_attempt": (
+                "AD-05",
+                "写 Windows 系统路径",
+                "Windows system path write attempt",
+            ),
+            "ad_06_linux_system_path_write_attempt": (
+                "AD-06",
+                "写 Linux 系统路径",
+                "Linux system path write attempt",
+            ),
+            "ad_07_script_file_write_attempt": (
+                "AD-07",
+                "写脚本文件",
+                "Script file write attempt",
+            ),
+            "ad_08_path_traversal_write_attempt": (
+                "AD-08",
+                "目录穿越写文件",
+                "Directory traversal write attempt",
+            ),
         }
         return labels.get(scenario_id, (scenario_id, scenario_id, scenario_id))
 
@@ -256,6 +278,7 @@ class ReportRenderer:
             "",
             "- payload 是惰性字符串",
             "- 不真实读取系统文件",
+            "- 不真实写入系统文件",
             "- 不真实执行 shell",
             "- 不真实联网",
             "- 危险路径会在 FakeTool 执行前被拦截",
@@ -269,6 +292,7 @@ class ReportRenderer:
             "",
             "- Payloads are inert strings",
             "- No real system file reads",
+            "- No real system file writes",
             "- No real shell execution",
             "- No real network calls",
             "- Dangerous paths are blocked before FakeTool execution",
