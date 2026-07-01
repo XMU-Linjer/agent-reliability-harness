@@ -16,6 +16,7 @@ from agent_reliability_harness.fault_injector import (
     ProviderTimeoutInjected,
 )
 from agent_reliability_harness.mock_llm import MockLLMProvider, MockLLMResponseExhausted
+from agent_reliability_harness.report_renderer import ReportRenderer
 from agent_reliability_harness.runner import (
     run_scenario_day2,
     run_scenario_day3,
@@ -95,4 +96,6 @@ __all__ = [
     "BenchmarkRunner",
     "BenchmarkRunResult",
     "ScorecardGenerator",
+    # ReportRenderer (Day 7)
+    "ReportRenderer",
 ]

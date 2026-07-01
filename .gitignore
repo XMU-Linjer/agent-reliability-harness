@@ -31,3 +31,8 @@ runs/*/
 # Environment
 .env
 .env.local
+
+# Local benchmark/test outputs
+.tmp/
+runs/
+.day5-tmp/

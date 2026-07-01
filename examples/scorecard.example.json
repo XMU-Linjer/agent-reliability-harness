@@ -1,0 +1,36 @@
+{
+  "run_id": "local-demo",
+  "scenarios_total": 2,
+  "scenarios_passed": 2,
+  "scenarios_failed": 0,
+  "pass_rate": 1.0,
+  "failure_type_counts": {
+    "none": 1,
+    "policy_violation": 1
+  },
+  "status_counts": {
+    "blocked": 1,
+    "passed": 1
+  },
+  "results": [
+    {
+      "scenario_id": "normal_agent_run",
+      "status": "passed",
+      "expected_failure": "none",
+      "failure_type": "none",
+      "passed": true,
+      "trace_file": "runs/local-demo/local-demo/normal_agent_run/trace.jsonl",
+      "events_count": 12
+    },
+    {
+      "scenario_id": "model_not_allowed",
+      "status": "blocked",
+      "expected_failure": "policy_violation",
+      "failure_type": "policy_violation",
+      "passed": true,
+      "trace_file": "runs/local-demo/local-demo/model_not_allowed/trace.jsonl",
+      "events_count": 5
+    }
+  ],
+  "output_dir": "runs/local-demo/local-demo"
+}
