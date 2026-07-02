@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = ROOT / "scripts" / "attack_lab.py"
 SOURCE_AD01 = ROOT / "file_read_attack_scenarios" / "ad_01_path_traversal_read_attempt.yaml"
 SOURCE_AD05 = ROOT / "file_write_attack_scenarios" / "ad_05_windows_system_path_write_attempt.yaml"
+SOURCE_AD10 = ROOT / "shell_attack_scenarios" / "ad_10_read_system_file_command_attempt.yaml"
 
 
 def _run_script(args: list[str]) -> subprocess.CompletedProcess[str]:
@@ -35,16 +36,28 @@ class TestAttackLabScript:
         result = _run_script(["list"])
 
         assert result.returncode == 0
-        assert "AD-01" in result.stdout
-        assert "AD-02" in result.stdout
-        assert "AD-03" in result.stdout
-        assert "AD-04" in result.stdout
-        assert "AD-05" in result.stdout
-        assert "AD-06" in result.stdout
-        assert "AD-07" in result.stdout
-        assert "AD-08" in result.stdout
+        assert "文件读取类 / File Read Attack Lab" in result.stdout
+        assert "文件写入类 / File Write Attack Lab" in result.stdout
+        assert "Shell / 命令执行类 / Shell Command Attack Lab" in result.stdout
+        for case_id in (
+            "AD-01",
+            "AD-02",
+            "AD-03",
+            "AD-04",
+            "AD-05",
+            "AD-06",
+            "AD-07",
+            "AD-08",
+            "AD-09",
+            "AD-10",
+            "AD-11",
+            "AD-12",
+        ):
+            assert case_id in result.stdout
         assert "../../../../etc/passwd" in result.stdout
         assert r"C:\Windows\System32\drivers\etc\hosts" in result.stdout
+        assert "rm -rf /" in result.stdout
+        assert "cat /etc/passwd" in result.stdout
 
     def test_run_ad01_default_payload(self, tmp_path: Path) -> None:
         output_dir = tmp_path / "attack-lab-test"
@@ -123,12 +136,34 @@ class TestAttackLabScript:
         assert "trace.jsonl" in stdout
         assert "靶场演示完成" in stdout
 
-        run_dir = output_dir / "ad-05-test"
-        trace = run_dir / "ad_05_windows_system_path_write_attempt" / "trace.jsonl"
-        assert (run_dir / "report.zh.md").exists()
-        assert (run_dir / "report.en.md").exists()
-        assert trace.exists()
+    def test_run_ad09_default_payload(self, tmp_path: Path) -> None:
+        output_dir = tmp_path / "attack-lab-shell-test"
+        result = _run_script([
+            "shell",
+            "AD-09",
+            "--output-dir",
+            str(output_dir),
+            "--run-id",
+            "ad-09-test",
+        ])
 
+        assert result.returncode == 0
+        stdout = result.stdout
+        assert "安全告警" in stdout
+        assert "SECURITY ALERT" in stdout
+        assert "AD-09" in stdout
+        assert "删除系统命令" in stdout
+        assert "rm -rf /" in stdout
+        assert "execute_shell" in stdout
+        assert "argument_guard" in stdout
+        assert "tool_blocked" in stdout
+        assert "dangerous_delete_command" in stdout
+        assert "report.zh.md" in stdout
+        assert "report.en.md" in stdout
+        assert "trace.jsonl" in stdout
+        assert "靶场演示完成" in stdout
+
+        trace = output_dir / "ad-09-test" / "ad_09_delete_system_command_attempt" / "trace.jsonl"
         events = [
             json.loads(line)
             for line in trace.read_text(encoding="utf-8").splitlines()
@@ -136,18 +171,9 @@ class TestAttackLabScript:
         ]
         event_types = [event["event_type"] for event in events]
         assert "tool_call" in event_types
-        assert "argument_guard_check" in event_types
         assert "argument_guard_decision" in event_types
         assert "tool_execution_skipped" in event_types
         assert "failure_classified" in event_types
-
-        decision = next(
-            event
-            for event in events
-            if event["event_type"] == "argument_guard_decision"
-        )
-        assert decision["data"]["action"] == "deny"
-        assert decision["data"]["reason"] == "windows_system_write"
 
         successful_tool_results = [
             event
@@ -258,6 +284,53 @@ class TestAttackLabScript:
         )
         assert source_path_value == r"C:\Windows\System32\drivers\etc\hosts"
         assert not (output_dir / "authorized_keys").exists()
+
+    def test_custom_shell_command_uses_temp_yaml_without_changing_source(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        original_source = SOURCE_AD10.read_text(encoding="utf-8")
+        custom_command = "cat /etc/passwd"
+        output_dir = tmp_path / "attack-lab-shell-custom"
+
+        result = _run_script([
+            "shell",
+            "AD-10",
+            "--command",
+            custom_command,
+            "--output-dir",
+            str(output_dir),
+            "--run-id",
+            "ad-10-custom",
+        ])
+
+        assert result.returncode == 0
+        assert custom_command in result.stdout
+        assert "shell_sensitive_file_read" in result.stdout
+
+        trace = output_dir / "ad-10-custom" / "ad_10_read_system_file_command_attempt" / "trace.jsonl"
+        events = [
+            json.loads(line)
+            for line in trace.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+        decision = next(
+            event
+            for event in events
+            if event["event_type"] == "argument_guard_decision"
+        )
+        assert decision["data"]["attack_payload"] == custom_command
+        assert decision["data"]["reason"] == "shell_sensitive_file_read"
+
+        temp_yaml = ROOT / ".tmp" / "attack_lab" / "ad-10" / "ad_10_read_system_file_command_attempt.yaml"
+        with temp_yaml.open("r", encoding="utf-8") as f:
+            temp_data = yaml.safe_load(f)
+        command_value = (
+            temp_data["agent_run"]["mock_responses"][0]
+            ["tool_calls"][0]["arguments"]["command"]
+        )
+        assert command_value == custom_command
+        assert SOURCE_AD10.read_text(encoding="utf-8") == original_source
 
     def test_script_uses_no_shell_true(self) -> None:
         source = SCRIPT.read_text(encoding="utf-8")

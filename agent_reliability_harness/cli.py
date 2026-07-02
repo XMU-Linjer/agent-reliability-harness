@@ -209,6 +209,26 @@ def _case_labels(result: dict[str, Any]) -> tuple[str, str, str]:
             "目录穿越写文件",
             "Directory traversal write attempt",
         ),
+        "ad_09_delete_system_command_attempt": (
+            "AD-09",
+            "删除系统命令",
+            "Dangerous delete command",
+        ),
+        "ad_10_read_system_file_command_attempt": (
+            "AD-10",
+            "读取系统文件命令",
+            "Shell sensitive file read command",
+        ),
+        "ad_11_external_download_command_attempt": (
+            "AD-11",
+            "外联下载命令",
+            "External download command",
+        ),
+        "ad_12_powershell_download_execute_attempt": (
+            "AD-12",
+            "PowerShell 下载执行",
+            "PowerShell download-and-execute command",
+        ),
     }
     return labels.get(scenario_id, (scenario_id, scenario_id, scenario_id))
 

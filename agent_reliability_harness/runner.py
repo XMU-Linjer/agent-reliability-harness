@@ -678,6 +678,10 @@ def run_scenario_day5(
                 "action": fw_decision.action.value,
                 "reason": fw_decision.reason,
                 "check_type": fw_decision.check_type,
+                "tool": tc.tool,
+                "attack_payload": _attack_payload_from_arguments(tc.arguments),
+                "blocked_by": "tool_firewall"
+                if fw_decision.action == GuardAction.deny else "",
                 "prompt_injection": has_pi,
             })
 
@@ -688,7 +692,7 @@ def run_scenario_day5(
             _emit(EventType.argument_guard_check, "argument_guard", {
                 "tool": tc.tool,
                 "arguments": tc.arguments,
-                "attack_payload": tc.arguments.get("path"),
+                "attack_payload": _attack_payload_from_arguments(tc.arguments),
             })
 
             arg_decision = argument_guard.check_tool_call(tc.tool, tc.arguments)
@@ -699,6 +703,8 @@ def run_scenario_day5(
                 "reason": arg_decision.reason,
                 "reason_zh": arg_decision.reason_zh,
                 "reason_en": arg_decision.reason_en,
+                "blocked_by": "argument_guard"
+                if arg_decision.action == GuardAction.deny else "",
                 "attack_payload": arg_decision.evidence.get("attack_payload"),
                 "evidence": arg_decision.evidence,
             })
@@ -706,6 +712,7 @@ def run_scenario_day5(
             if arg_decision.action == GuardAction.deny:
                 _emit(EventType.tool_execution_skipped, "runner", {
                     "tool": tc.tool,
+                    "blocked_by": "argument_guard",
                     "reason": arg_decision.reason,
                     "reason_zh": arg_decision.reason_zh,
                     "reason_en": arg_decision.reason_en,
@@ -800,6 +807,7 @@ def _finalise(
     result = {
         "scenario_id": scenario.id,
         "case_id": _case_id_from_scenario_id(scenario.id),
+        "category": _category_from_scenario_id(scenario.id),
         "status": status,
         "expected_failure": scenario.expected_failure.value,
         "failure_type": failure_type.value,
@@ -816,6 +824,24 @@ def _case_id_from_scenario_id(scenario_id: str) -> str:
     if len(prefix) == 2 and prefix[0] == "ad" and prefix[1].isdigit():
         return f"AD-{prefix[1]}"
     return scenario_id
+
+
+def _category_from_scenario_id(scenario_id: str) -> str:
+    if "_command_" in scenario_id or "powershell" in scenario_id:
+        return "shell"
+    if "_read_" in scenario_id:
+        return "file-read"
+    if "_write_" in scenario_id:
+        return "file-write"
+    return "benchmark"
+
+
+def _attack_payload_from_arguments(arguments: dict[str, Any]) -> Any:
+    if "command" in arguments:
+        return arguments.get("command")
+    if "path" in arguments:
+        return arguments.get("path")
+    return ""
 
 
 def _extract_security_evidence(events: list[TraceEventRecord]) -> dict[str, Any]:
@@ -840,7 +866,7 @@ def _extract_security_evidence(events: list[TraceEventRecord]) -> dict[str, Any]
                     "reason": ev.data.get("check_type", ""),
                     "reason_zh": ev.data.get("reason", ""),
                     "reason_en": ev.data.get("reason", ""),
-                    "attack_payload": "",
+                    "attack_payload": ev.data.get("attack_payload", ""),
                     "tool": ev.data.get("tool", ""),
                 }
 

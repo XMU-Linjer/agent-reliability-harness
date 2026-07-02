@@ -47,8 +47,27 @@ class FailureClassifier:
                 if ev.data.get("action") != "deny":
                     continue
                 check_type = ev.data.get("check_type", "")
+                reason = ev.data.get("reason", "")
                 if check_type == "invalid_arguments":
                     return FailureType.invalid_arguments
+                if check_type in (
+                    "dangerous_delete_command",
+                    "shell_sensitive_file_read",
+                    "external_download_command",
+                    "powershell_download_execute",
+                    "dangerous_command",
+                    "shell_command",
+                    "command_download",
+                ) or reason in (
+                    "dangerous_delete_command",
+                    "shell_sensitive_file_read",
+                    "external_download_command",
+                    "powershell_download_execute",
+                    "dangerous_command",
+                    "shell_command",
+                    "command_download",
+                ):
+                    return FailureType.tool_blocked
                 if check_type in (
                     "path_traversal",
                     "sensitive_path",

@@ -109,7 +109,10 @@ class ReportRenderer:
             lines.append("| none | 无安全告警 |  |  |  |  | none |  |")
         for result in alert_results:
             case_id, attack_zh, _attack_en = self._case_labels(result)
-            reason = result.get("reason_zh") or result.get("reason") or ""
+            reason = self._reason_with_detail(
+                result.get("reason"),
+                result.get("reason_zh"),
+            )
             lines.append(
                 "| "
                 f"{self._cell(case_id)} | "
@@ -153,7 +156,10 @@ class ReportRenderer:
             lines.append("| none | no security alerts |  |  |  |  | none |  |")
         for result in alert_results:
             case_id, _attack_zh, attack_en = self._case_labels(result)
-            reason = result.get("reason_en") or result.get("reason") or ""
+            reason = self._reason_with_detail(
+                result.get("reason"),
+                result.get("reason_en"),
+            )
             lines.append(
                 "| "
                 f"{self._cell(case_id)} | "
@@ -268,8 +274,35 @@ class ReportRenderer:
                 "目录穿越写文件",
                 "Directory traversal write attempt",
             ),
+            "ad_09_delete_system_command_attempt": (
+                "AD-09",
+                "删除系统命令",
+                "Dangerous delete command",
+            ),
+            "ad_10_read_system_file_command_attempt": (
+                "AD-10",
+                "读取系统文件命令",
+                "Shell sensitive file read command",
+            ),
+            "ad_11_external_download_command_attempt": (
+                "AD-11",
+                "外联下载命令",
+                "External download command",
+            ),
+            "ad_12_powershell_download_execute_attempt": (
+                "AD-12",
+                "PowerShell 下载执行",
+                "PowerShell download-and-execute command",
+            ),
         }
         return labels.get(scenario_id, (scenario_id, scenario_id, scenario_id))
+
+    def _reason_with_detail(self, reason: Any, detail: Any) -> str:
+        reason_text = "" if reason is None else str(reason)
+        detail_text = "" if detail is None else str(detail)
+        if reason_text and detail_text and reason_text != detail_text:
+            return f"{reason_text} - {detail_text}"
+        return reason_text or detail_text
 
     def _boundaries_zh(self) -> list[str]:
         return [
@@ -281,7 +314,7 @@ class ReportRenderer:
             "- 不真实写入系统文件",
             "- 不真实执行 shell",
             "- 不真实联网",
-            "- 危险路径会在 FakeTool 执行前被拦截",
+            "- 危险路径和危险命令会在 FakeTool 执行前被拦截",
             "",
         ]
 
@@ -295,7 +328,7 @@ class ReportRenderer:
             "- No real system file writes",
             "- No real shell execution",
             "- No real network calls",
-            "- Dangerous paths are blocked before FakeTool execution",
+            "- Dangerous paths and commands are blocked before FakeTool execution",
             "",
         ]
 

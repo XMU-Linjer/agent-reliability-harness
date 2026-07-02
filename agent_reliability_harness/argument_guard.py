@@ -1,5 +1,5 @@
 """
-Argument checks for controlled file read/write attack simulations.
+Argument checks for controlled attack simulations.
 
 ArgumentGuard only inspects strings from mock tool calls. It never reads real
 files, writes files, resolves real paths, opens sockets, or executes commands.
@@ -27,23 +27,25 @@ class ArgumentGuardDecision:
 
 
 class ArgumentGuard:
-    """Detect dangerous path payloads before FakeTools run."""
+    """Detect dangerous payloads before FakeTools run."""
 
     def check_tool_call(
         self,
         tool_name: str,
         arguments: dict[str, Any],
     ) -> ArgumentGuardDecision:
-        """Check a mock tool call without touching the real filesystem."""
+        """Check a mock tool call without touching the real system."""
         if tool_name == "read_file":
             return self._check_read_file(arguments)
         if tool_name == "write_file":
             return self._check_write_file(arguments)
+        if tool_name == "execute_shell":
+            return self._check_execute_shell(arguments)
         return self._allow(tool_name)
 
     def _check_read_file(self, arguments: dict[str, Any]) -> ArgumentGuardDecision:
         path = arguments.get("path")
-        invalid = self._check_path_value("read_file", path)
+        invalid = self._check_string_value("read_file", "path", path)
         if invalid is not None:
             return invalid
 
@@ -58,7 +60,8 @@ class ArgumentGuard:
                 reason="windows_sensitive_path",
                 reason_zh="检测到 Windows 敏感路径读取尝试",
                 reason_en="Windows sensitive path read attempt detected",
-                path=path,
+                argument_name="path",
+                payload=path,
             )
 
         if lowered == "/etc/passwd" or lowered.startswith("/etc/"):
@@ -68,7 +71,8 @@ class ArgumentGuard:
                 reason="linux_sensitive_path",
                 reason_zh="检测到 Linux 敏感路径读取尝试",
                 reason_en="Linux sensitive path read attempt detected",
-                path=path,
+                argument_name="path",
+                payload=path,
             )
 
         if self._contains_parent_segment(normalized):
@@ -83,14 +87,15 @@ class ArgumentGuard:
                 reason="path_traversal",
                 reason_zh=reason_zh,
                 reason_en=reason_en,
-                path=path,
+                argument_name="path",
+                payload=path,
             )
 
         return self._allow("read_file")
 
     def _check_write_file(self, arguments: dict[str, Any]) -> ArgumentGuardDecision:
         path = arguments.get("path")
-        invalid = self._check_path_value("write_file", path)
+        invalid = self._check_string_value("write_file", "path", path)
         if invalid is not None:
             return invalid
 
@@ -105,7 +110,8 @@ class ArgumentGuard:
                 reason="windows_system_write",
                 reason_zh="检测到 Windows 系统路径写入尝试",
                 reason_en="Windows system path write attempt detected",
-                path=path,
+                argument_name="path",
+                payload=path,
             )
 
         if lowered == "/etc/hosts" or lowered.startswith("/etc/"):
@@ -115,7 +121,8 @@ class ArgumentGuard:
                 reason="linux_system_write",
                 reason_zh="检测到 Linux 系统路径写入尝试",
                 reason_en="Linux system path write attempt detected",
-                path=path,
+                argument_name="path",
+                payload=path,
             )
 
         if lowered.endswith((".ps1", ".bat", ".cmd", ".sh")):
@@ -125,7 +132,8 @@ class ArgumentGuard:
                 reason="script_file_write",
                 reason_zh="检测到脚本文件写入尝试",
                 reason_en="Script file write attempt detected",
-                path=path,
+                argument_name="path",
+                payload=path,
             )
 
         if self._contains_parent_segment(normalized):
@@ -135,25 +143,72 @@ class ArgumentGuard:
                 reason="path_traversal",
                 reason_zh="检测到目录穿越写文件尝试",
                 reason_en="Directory traversal write attempt detected",
-                path=path,
+                argument_name="path",
+                payload=path,
             )
 
         return self._allow("write_file")
 
-    def _check_path_value(
+    def _check_execute_shell(self, arguments: dict[str, Any]) -> ArgumentGuardDecision:
+        command = arguments.get("command")
+        invalid = self._check_string_value("execute_shell", "command", command)
+        if invalid is not None:
+            return invalid
+
+        assert isinstance(command, str)
+        normalized = " ".join(command.strip().lower().split())
+
+        if normalized == "rm -rf /":
+            return self._deny_command(
+                reason="dangerous_delete_command",
+                reason_zh="检测到危险删除命令，已阻止 execute_shell 执行",
+                reason_en="Dangerous delete command detected; execute_shell execution was blocked",
+                command=command,
+            )
+
+        if normalized == "cat /etc/passwd":
+            return self._deny_command(
+                reason="shell_sensitive_file_read",
+                reason_zh="检测到通过 shell 读取系统文件的尝试，已阻止 execute_shell 执行",
+                reason_en="Shell-based sensitive file read attempt detected; execute_shell execution was blocked",
+                command=command,
+            )
+
+        if normalized.startswith("curl ") and "http://evil.example/" in normalized:
+            return self._deny_command(
+                reason="external_download_command",
+                reason_zh="检测到外联下载命令，已阻止 execute_shell 执行",
+                reason_en="External download command detected; execute_shell execution was blocked",
+                command=command,
+            )
+
+        if normalized.startswith("powershell ") and " iwr " in f" {normalized} ":
+            if "http://evil.example/" in normalized:
+                return self._deny_command(
+                    reason="powershell_download_execute",
+                    reason_zh="检测到 PowerShell 下载执行尝试，已阻止 execute_shell 执行",
+                    reason_en="PowerShell download-and-execute attempt detected; execute_shell execution was blocked",
+                    command=command,
+                )
+
+        return self._allow("execute_shell")
+
+    def _check_string_value(
         self,
         tool_name: str,
-        path: Any,
+        argument_name: str,
+        value: Any,
     ) -> ArgumentGuardDecision | None:
-        if isinstance(path, str) and path.strip() != "":
+        if isinstance(value, str) and value.strip() != "":
             return None
         return self._deny(
             tool_name=tool_name,
             check_type="invalid_arguments",
             reason="invalid_arguments",
-            reason_zh=f"{tool_name}.path 必须是非空字符串",
-            reason_en=f"{tool_name}.path must be a non-empty string",
-            path=path,
+            reason_zh=f"{tool_name}.{argument_name} 必须是非空字符串",
+            reason_en=f"{tool_name}.{argument_name} must be a non-empty string",
+            argument_name=argument_name,
+            payload=value,
         )
 
     def _contains_parent_segment(self, normalized_path: str) -> bool:
@@ -170,6 +225,23 @@ class ArgumentGuard:
             reason_en="Arguments allowed",
         )
 
+    def _deny_command(
+        self,
+        reason: str,
+        reason_zh: str,
+        reason_en: str,
+        command: str,
+    ) -> ArgumentGuardDecision:
+        return self._deny(
+            tool_name="execute_shell",
+            check_type=reason,
+            reason=reason,
+            reason_zh=reason_zh,
+            reason_en=reason_en,
+            argument_name="command",
+            payload=command,
+        )
+
     def _deny(
         self,
         tool_name: str,
@@ -177,7 +249,8 @@ class ArgumentGuard:
         reason: str,
         reason_zh: str,
         reason_en: str,
-        path: Any,
+        argument_name: str,
+        payload: Any,
     ) -> ArgumentGuardDecision:
         return ArgumentGuardDecision(
             action=GuardAction.deny,
@@ -186,5 +259,5 @@ class ArgumentGuard:
             reason=reason,
             reason_zh=reason_zh,
             reason_en=reason_en,
-            evidence={"path": path, "attack_payload": path},
+            evidence={argument_name: payload, "attack_payload": payload},
         )
