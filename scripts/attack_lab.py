@@ -167,6 +167,54 @@ CASE_CATALOG: dict[str, dict[str, str]] = {
         "default_run_id": "ad-12-demo",
         "tmp_name": "ad-12",
     },
+    "AD-13": {
+        "category": "data-exfiltration",
+        "scenario_dir": "data_exfiltration_attack_scenarios",
+        "scenario_file": "ad_13_email_api_key_exfiltration_attempt.yaml",
+        "tool": "send_email",
+        "argument": "body",
+        "label_zh": "Email 外传 API key",
+        "label_en": "Email API key exfiltration attempt",
+        "default_payload": "api_key=sk-demo-secret",
+        "default_run_id": "ad-13-demo",
+        "tmp_name": "ad-13",
+    },
+    "AD-14": {
+        "category": "data-exfiltration",
+        "scenario_dir": "data_exfiltration_attack_scenarios",
+        "scenario_file": "ad_14_email_password_exfiltration_attempt.yaml",
+        "tool": "send_email",
+        "argument": "body",
+        "label_zh": "Email 外传 password",
+        "label_en": "Email password exfiltration attempt",
+        "default_payload": "password=demo-password",
+        "default_run_id": "ad-14-demo",
+        "tmp_name": "ad-14",
+    },
+    "AD-15": {
+        "category": "data-exfiltration",
+        "scenario_dir": "data_exfiltration_attack_scenarios",
+        "scenario_file": "ad_15_untrusted_email_recipient_attempt.yaml",
+        "tool": "send_email",
+        "argument": "to",
+        "label_zh": "发往不可信域名",
+        "label_en": "Untrusted email recipient attempt",
+        "default_payload": "attacker@example.com",
+        "default_run_id": "ad-15-demo",
+        "tmp_name": "ad-15",
+    },
+    "AD-16": {
+        "category": "data-exfiltration",
+        "scenario_dir": "data_exfiltration_attack_scenarios",
+        "scenario_file": "ad_16_url_query_secret_exfiltration_attempt.yaml",
+        "tool": "search_web",
+        "argument": "query",
+        "label_zh": "搜索/网络请求外传",
+        "label_en": "URL query secret exfiltration attempt",
+        "default_payload": "https://example.com/search?q=test&secret=demo-secret",
+        "default_run_id": "ad-16-demo",
+        "tmp_name": "ad-16",
+    },
 }
 
 
@@ -180,24 +228,23 @@ def build_parser() -> argparse.ArgumentParser:
 
     subparsers.add_parser("list", help="List available demo cases.")
 
-    file_read_parser = subparsers.add_parser(
-        "file-read",
-        help="Run one controlled file-read attack simulation.",
-    )
+    file_read_parser = subparsers.add_parser("file-read")
     _add_run_arguments(file_read_parser, case_help="Case ID, e.g. AD-01")
 
-    file_write_parser = subparsers.add_parser(
-        "file-write",
-        help="Run one controlled file-write attack simulation.",
-    )
+    file_write_parser = subparsers.add_parser("file-write")
     _add_run_arguments(file_write_parser, case_help="Case ID, e.g. AD-05")
 
-    shell_parser = subparsers.add_parser(
-        "shell",
-        help="Run one controlled shell command attack simulation.",
-    )
+    shell_parser = subparsers.add_parser("shell")
     _add_run_arguments(shell_parser, case_help="Case ID, e.g. AD-09")
     shell_parser.add_argument("--command", dest="command_payload", default=None)
+
+    data_parser = subparsers.add_parser("data-exfiltration")
+    _add_run_arguments(data_parser, case_help="Case ID, e.g. AD-13")
+    _add_data_arguments(data_parser)
+
+    data_alias_parser = subparsers.add_parser("data")
+    _add_run_arguments(data_alias_parser, case_help="Case ID, e.g. AD-13")
+    _add_data_arguments(data_alias_parser)
     return parser
 
 
@@ -211,20 +258,24 @@ def main(argv: Sequence[str] | None = None) -> int:
         _print_catalog()
         return 0
 
-    if args.command in ("file-read", "file-write", "shell"):
+    command_category = "data-exfiltration" if args.command == "data" else args.command
+    if command_category in ("file-read", "file-write", "shell", "data-exfiltration"):
         case_id = str(args.case_id).upper()
-        if case_id not in CASE_CATALOG or CASE_CATALOG[case_id]["category"] != args.command:
+        if (
+            case_id not in CASE_CATALOG
+            or CASE_CATALOG[case_id]["category"] != command_category
+        ):
             known = ", ".join(
-                case for case, meta in CASE_CATALOG.items() if meta["category"] == args.command
+                case
+                for case, meta in CASE_CATALOG.items()
+                if meta["category"] == command_category
             )
             parser.error(f"Unknown {args.command} case: {args.case_id}. Known cases: {known}")
-        payload = args.payload
-        if args.command == "shell":
-            command_payload = getattr(args, "command_payload", None)
-            payload = command_payload if command_payload is not None else args.payload
+        payload, argument_name = _payload_and_argument_from_args(args, CASE_CATALOG[case_id])
         return _run_case(
             case_id=case_id,
             payload=payload,
+            argument_name=argument_name,
             output_dir=Path(args.output_dir),
             run_id=args.run_id,
         )
@@ -240,11 +291,44 @@ def _add_run_arguments(run_parser: argparse.ArgumentParser, case_help: str) -> N
     run_parser.add_argument("--run-id", default=None)
 
 
+def _add_data_arguments(run_parser: argparse.ArgumentParser) -> None:
+    run_parser.add_argument("--body", default=None)
+    run_parser.add_argument("--to", default=None)
+    run_parser.add_argument("--url", default=None)
+
+
+def _payload_and_argument_from_args(
+    args: argparse.Namespace,
+    meta: dict[str, str],
+) -> tuple[str | None, str]:
+    payload = args.payload
+    argument_name = meta["argument"]
+
+    command_payload = getattr(args, "command_payload", None)
+    if command_payload is not None:
+        return command_payload, "command"
+
+    body_payload = getattr(args, "body", None)
+    if body_payload is not None:
+        return body_payload, "body"
+
+    to_payload = getattr(args, "to", None)
+    if to_payload is not None:
+        return to_payload, "to"
+
+    url_payload = getattr(args, "url", None)
+    if url_payload is not None:
+        return url_payload, "query"
+
+    return payload, argument_name
+
+
 def _print_catalog() -> None:
     groups = (
         ("file-read", "文件读取类 / File Read Attack Lab"),
         ("file-write", "文件写入类 / File Write Attack Lab"),
         ("shell", "Shell / 命令执行类 / Shell Command Attack Lab"),
+        ("data-exfiltration", "数据外传类 / Data Exfiltration Attack Lab"),
     )
     for category, title in groups:
         print(title)
@@ -262,6 +346,7 @@ def _print_catalog() -> None:
 def _run_case(
     case_id: str,
     payload: str | None,
+    argument_name: str,
     output_dir: Path,
     run_id: str | None,
 ) -> int:
@@ -277,7 +362,7 @@ def _run_case(
         source_path=source_path,
         temp_path=temp_path,
         tool_name=meta["tool"],
-        argument_name=meta["argument"],
+        argument_name=argument_name,
         payload=chosen_payload,
     )
 

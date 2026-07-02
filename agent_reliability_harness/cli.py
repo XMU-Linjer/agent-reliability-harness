@@ -169,66 +169,22 @@ def _is_security_event(result: dict[str, Any]) -> bool:
 def _case_labels(result: dict[str, Any]) -> tuple[str, str, str]:
     scenario_id = str(result.get("scenario_id", "unknown"))
     labels = {
-        "ad_01_path_traversal_read_attempt": (
-            "AD-01",
-            "路径穿越读取",
-            "Path traversal read attempt",
-        ),
-        "ad_02_linux_sensitive_path_read_attempt": (
-            "AD-02",
-            "Linux 敏感路径读取",
-            "Linux sensitive path read attempt",
-        ),
-        "ad_03_windows_sensitive_path_read_attempt": (
-            "AD-03",
-            "Windows 敏感路径读取",
-            "Windows sensitive path read attempt",
-        ),
-        "ad_04_outside_project_read_attempt": (
-            "AD-04",
-            "项目目录外读取",
-            "Outside workspace read attempt",
-        ),
-        "ad_05_windows_system_path_write_attempt": (
-            "AD-05",
-            "写 Windows 系统路径",
-            "Windows system path write attempt",
-        ),
-        "ad_06_linux_system_path_write_attempt": (
-            "AD-06",
-            "写 Linux 系统路径",
-            "Linux system path write attempt",
-        ),
-        "ad_07_script_file_write_attempt": (
-            "AD-07",
-            "写脚本文件",
-            "Script file write attempt",
-        ),
-        "ad_08_path_traversal_write_attempt": (
-            "AD-08",
-            "目录穿越写文件",
-            "Directory traversal write attempt",
-        ),
-        "ad_09_delete_system_command_attempt": (
-            "AD-09",
-            "删除系统命令",
-            "Dangerous delete command",
-        ),
-        "ad_10_read_system_file_command_attempt": (
-            "AD-10",
-            "读取系统文件命令",
-            "Shell sensitive file read command",
-        ),
-        "ad_11_external_download_command_attempt": (
-            "AD-11",
-            "外联下载命令",
-            "External download command",
-        ),
-        "ad_12_powershell_download_execute_attempt": (
-            "AD-12",
-            "PowerShell 下载执行",
-            "PowerShell download-and-execute command",
-        ),
+        "ad_01_path_traversal_read_attempt": ("AD-01", "路径穿越读取", "Path traversal read attempt"),
+        "ad_02_linux_sensitive_path_read_attempt": ("AD-02", "Linux 敏感路径读取", "Linux sensitive path read attempt"),
+        "ad_03_windows_sensitive_path_read_attempt": ("AD-03", "Windows 敏感路径读取", "Windows sensitive path read attempt"),
+        "ad_04_outside_project_read_attempt": ("AD-04", "项目目录外读取", "Outside workspace read attempt"),
+        "ad_05_windows_system_path_write_attempt": ("AD-05", "写 Windows 系统路径", "Windows system path write attempt"),
+        "ad_06_linux_system_path_write_attempt": ("AD-06", "写 Linux 系统路径", "Linux system path write attempt"),
+        "ad_07_script_file_write_attempt": ("AD-07", "写脚本文件", "Script file write attempt"),
+        "ad_08_path_traversal_write_attempt": ("AD-08", "目录穿越写文件", "Directory traversal write attempt"),
+        "ad_09_delete_system_command_attempt": ("AD-09", "删除系统命令", "Dangerous delete command"),
+        "ad_10_read_system_file_command_attempt": ("AD-10", "读取系统文件命令", "Shell sensitive file read command"),
+        "ad_11_external_download_command_attempt": ("AD-11", "外联下载命令", "External download command"),
+        "ad_12_powershell_download_execute_attempt": ("AD-12", "PowerShell 下载执行", "PowerShell download-and-execute command"),
+        "ad_13_email_api_key_exfiltration_attempt": ("AD-13", "Email 外传 API key", "Email API key exfiltration attempt"),
+        "ad_14_email_password_exfiltration_attempt": ("AD-14", "Email 外传 password", "Email password exfiltration attempt"),
+        "ad_15_untrusted_email_recipient_attempt": ("AD-15", "发往不可信域名", "Untrusted email recipient attempt"),
+        "ad_16_url_query_secret_exfiltration_attempt": ("AD-16", "搜索/网络请求外传", "URL query secret exfiltration attempt"),
     }
     return labels.get(scenario_id, (scenario_id, scenario_id, scenario_id))
 

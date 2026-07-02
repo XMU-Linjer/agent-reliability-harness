@@ -69,6 +69,20 @@ class FailureClassifier:
                 ):
                     return FailureType.tool_blocked
                 if check_type in (
+                    "data_exfiltration_api_key",
+                    "data_exfiltration_password",
+                    "untrusted_recipient_domain",
+                    "url_secret_exfiltration",
+                    "data_exfiltration",
+                ) or reason in (
+                    "data_exfiltration_api_key",
+                    "data_exfiltration_password",
+                    "untrusted_recipient_domain",
+                    "url_secret_exfiltration",
+                    "data_exfiltration",
+                ):
+                    return FailureType.permission_denied
+                if check_type in (
                     "path_traversal",
                     "sensitive_path",
                     "windows_sensitive_path",
