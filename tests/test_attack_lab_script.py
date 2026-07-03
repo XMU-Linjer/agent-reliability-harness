@@ -16,6 +16,7 @@ SOURCE_AD01 = ROOT / "file_read_attack_scenarios" / "ad_01_path_traversal_read_a
 SOURCE_AD05 = ROOT / "file_write_attack_scenarios" / "ad_05_windows_system_path_write_attempt.yaml"
 SOURCE_AD10 = ROOT / "shell_attack_scenarios" / "ad_10_read_system_file_command_attempt.yaml"
 SOURCE_AD16 = ROOT / "data_exfiltration_attack_scenarios" / "ad_16_url_query_secret_exfiltration_attempt.yaml"
+SOURCE_AD18 = ROOT / "network_ssrf_attack_scenarios" / "ad_18_localhost_probe_attempt.yaml"
 
 
 def _run_script(args: list[str]) -> subprocess.CompletedProcess[str]:
@@ -41,6 +42,7 @@ class TestAttackLabScript:
         assert "文件写入类 / File Write Attack Lab" in result.stdout
         assert "Shell / 命令执行类 / Shell Command Attack Lab" in result.stdout
         assert "数据外传类 / Data Exfiltration Attack Lab" in result.stdout
+        assert "网络 / SSRF 类 / Network SSRF Attack Lab" in result.stdout
         for case_id in (
             "AD-01",
             "AD-02",
@@ -58,11 +60,17 @@ class TestAttackLabScript:
             "AD-14",
             "AD-15",
             "AD-16",
+            "AD-17",
+            "AD-18",
+            "AD-19",
         ):
             assert case_id in result.stdout
         assert "rm -rf /" in result.stdout
         assert "api_key=sk-demo-secret" in result.stdout
         assert "https://example.com/search?q=test&secret=demo-secret" in result.stdout
+        assert "http://169.254.169.254/latest/meta-data/" in result.stdout
+        assert "http://127.0.0.1:8080/admin" in result.stdout
+        assert "http://10.0.0.1/" in result.stdout
 
     def test_run_ad01_default_payload(self, tmp_path: Path) -> None:
         result = _run_script([
@@ -173,6 +181,50 @@ class TestAttackLabScript:
         assert result.returncode == 0
         assert "AD-13" in result.stdout
         assert "api_key=sk-demo-secret" in result.stdout
+
+    def test_run_ad17_default_payload(self, tmp_path: Path) -> None:
+        output_dir = tmp_path / "attack-lab-network-test"
+        result = _run_script([
+            "network",
+            "AD-17",
+            "--output-dir",
+            str(output_dir),
+            "--run-id",
+            "ad-17-test",
+        ])
+
+        assert result.returncode == 0
+        stdout = result.stdout
+        assert "安全告警" in stdout
+        assert "SECURITY ALERT" in stdout
+        assert "AD-17" in stdout
+        assert "云元数据 SSRF" in stdout
+        assert "http://169.254.169.254/latest/meta-data/" in stdout
+        assert "search_web" in stdout
+        assert "permission_denied" in stdout
+        assert "ssrf_cloud_metadata" in stdout
+        assert "report.zh.md" in stdout
+        assert "report.en.md" in stdout
+        assert "trace.jsonl" in stdout
+        assert "靶场演示完成" in stdout
+
+        trace = output_dir / "ad-17-test" / "ad_17_cloud_metadata_ssrf_attempt" / "trace.jsonl"
+        events = _load_trace(trace)
+        _assert_no_successful_tool_result(events)
+
+    def test_ssrf_alias_runs_ad17(self, tmp_path: Path) -> None:
+        result = _run_script([
+            "ssrf",
+            "AD-17",
+            "--output-dir",
+            str(tmp_path / "attack-lab-ssrf-alias"),
+            "--run-id",
+            "ad-17-alias",
+        ])
+
+        assert result.returncode == 0
+        assert "AD-17" in result.stdout
+        assert "http://169.254.169.254/latest/meta-data/" in result.stdout
 
     def test_custom_file_read_payload_uses_temp_yaml_without_changing_source(
         self,
@@ -292,6 +344,36 @@ class TestAttackLabScript:
         temp_yaml = ROOT / ".tmp" / "attack_lab" / "ad-16" / "ad_16_url_query_secret_exfiltration_attempt.yaml"
         assert _tool_argument(temp_yaml, "query") == custom_url
         assert SOURCE_AD16.read_text(encoding="utf-8") == original_source
+
+    def test_custom_network_url_uses_temp_yaml_without_changing_source(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        original_source = SOURCE_AD18.read_text(encoding="utf-8")
+        custom_url = "http://127.0.0.1:8080/admin"
+        output_dir = tmp_path / "attack-lab-network-custom"
+
+        result = _run_script([
+            "network",
+            "AD-18",
+            "--url",
+            custom_url,
+            "--output-dir",
+            str(output_dir),
+            "--run-id",
+            "ad-18-custom",
+        ])
+
+        assert result.returncode == 0
+        assert custom_url in result.stdout
+        assert "ssrf_localhost" in result.stdout
+        trace = output_dir / "ad-18-custom" / "ad_18_localhost_probe_attempt" / "trace.jsonl"
+        decision = _first_event(_load_trace(trace), "argument_guard_decision")
+        assert decision["data"]["attack_payload"] == custom_url
+        assert decision["data"]["reason"] == "ssrf_localhost"
+        temp_yaml = ROOT / ".tmp" / "attack_lab" / "ad-18" / "ad_18_localhost_probe_attempt.yaml"
+        assert _tool_argument(temp_yaml, "query") == custom_url
+        assert SOURCE_AD18.read_text(encoding="utf-8") == original_source
 
     def test_script_uses_no_shell_true(self) -> None:
         source = SCRIPT.read_text(encoding="utf-8")

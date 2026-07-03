@@ -8,6 +8,7 @@ from agent_reliability_harness.cli import main
 
 SHELL_SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "shell_attack_scenarios"
 DATA_SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "data_exfiltration_attack_scenarios"
+NETWORK_SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "network_ssrf_attack_scenarios"
 
 
 class TestAttackReportsBilingual:
@@ -83,6 +84,39 @@ class TestAttackReportsBilingual:
 
         assert "Email 外传 API key" in report_zh_text
         assert "Email API key exfiltration attempt" in report_en_text
+
+    def test_network_reports_include_all_cases_and_reason_codes(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        exit_code = main([
+            "run",
+            "--scenarios-dir",
+            str(NETWORK_SCENARIOS_DIR),
+            "--output-dir",
+            str(tmp_path),
+            "--run-id",
+            "network-report-test",
+        ])
+
+        assert exit_code == 0
+        report_zh_text, report_en_text = _report_texts(tmp_path / "network-report-test")
+
+        for text in (report_zh_text, report_en_text):
+            assert "AD-17" in text
+            assert "AD-18" in text
+            assert "AD-19" in text
+            assert "http://169.254.169.254/latest/meta-data/" in text
+            assert "http://127.0.0.1:8080/admin" in text
+            assert "http://10.0.0.1/" in text
+            assert "search_web" in text
+            assert "permission_denied" in text
+            assert "ssrf_cloud_metadata" in text
+            assert "ssrf_localhost" in text
+            assert "ssrf_private_ip" in text
+
+        assert "云元数据 SSRF" in report_zh_text
+        assert "Cloud metadata SSRF attempt" in report_en_text
 
 
 def _report_texts(run_dir: Path) -> tuple[str, str]:

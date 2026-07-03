@@ -257,6 +257,40 @@ class ArgumentGuard:
 
         assert isinstance(query, str)
         lowered = query.lower()
+
+        if "169.254.169.254" in lowered and "meta-data" in lowered:
+            return self._deny(
+                tool_name="search_web",
+                check_type="ssrf_cloud_metadata",
+                reason="ssrf_cloud_metadata",
+                reason_zh="检测到云元数据地址访问尝试，已阻止 search_web 执行",
+                reason_en="Cloud metadata URL access attempt detected; search_web execution was blocked",
+                argument_name="query",
+                payload=query,
+            )
+
+        if self._looks_like_localhost_url(lowered):
+            return self._deny(
+                tool_name="search_web",
+                check_type="ssrf_localhost",
+                reason="ssrf_localhost",
+                reason_zh="检测到 localhost 探测尝试，已阻止 search_web 执行",
+                reason_en="Localhost probe attempt detected; search_web execution was blocked",
+                argument_name="query",
+                payload=query,
+            )
+
+        if self._looks_like_private_network_url(lowered):
+            return self._deny(
+                tool_name="search_web",
+                check_type="ssrf_private_ip",
+                reason="ssrf_private_ip",
+                reason_zh="检测到内网 IP 探测尝试，已阻止 search_web 执行",
+                reason_en="Private IP probe attempt detected; search_web execution was blocked",
+                argument_name="query",
+                payload=query,
+            )
+
         if "secret=" in lowered:
             return self._deny(
                 tool_name="search_web",
@@ -269,6 +303,35 @@ class ArgumentGuard:
             )
 
         return self._allow("search_web")
+
+    def _looks_like_localhost_url(self, lowered: str) -> bool:
+        return any(
+            marker in lowered
+            for marker in (
+                "://127.",
+                "://localhost",
+                "://0.0.0.0",
+                "@127.",
+                "@localhost",
+                "@0.0.0.0",
+            )
+        )
+
+    def _looks_like_private_network_url(self, lowered: str) -> bool:
+        private_markers = (
+            "://10.",
+            "://192.168.",
+            "@10.",
+            "@192.168.",
+        )
+        if any(marker in lowered for marker in private_markers):
+            return True
+        for second_octet in range(16, 32):
+            if f"://172.{second_octet}." in lowered or f"@172.{second_octet}." in lowered:
+                return True
+        if "://169.254." in lowered or "@169.254." in lowered:
+            return True
+        return False
 
     def _check_string_value(
         self,

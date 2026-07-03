@@ -827,6 +827,13 @@ def _case_id_from_scenario_id(scenario_id: str) -> str:
 
 
 def _category_from_scenario_id(scenario_id: str) -> str:
+    if (
+        "ssrf" in scenario_id
+        or "cloud_metadata" in scenario_id
+        or "_localhost_" in scenario_id
+        or "_private_ip_" in scenario_id
+    ):
+        return "network"
     if "exfiltration" in scenario_id or "_recipient_" in scenario_id:
         return "data-exfiltration"
     if "_command_" in scenario_id or "powershell" in scenario_id:

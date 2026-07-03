@@ -74,12 +74,22 @@ class FailureClassifier:
                     "untrusted_recipient_domain",
                     "url_secret_exfiltration",
                     "data_exfiltration",
+                    "ssrf_cloud_metadata",
+                    "ssrf_localhost",
+                    "ssrf_private_ip",
+                    "ssrf_private_network",
+                    "ssrf_link_local",
                 ) or reason in (
                     "data_exfiltration_api_key",
                     "data_exfiltration_password",
                     "untrusted_recipient_domain",
                     "url_secret_exfiltration",
                     "data_exfiltration",
+                    "ssrf_cloud_metadata",
+                    "ssrf_localhost",
+                    "ssrf_private_ip",
+                    "ssrf_private_network",
+                    "ssrf_link_local",
                 ):
                     return FailureType.permission_denied
                 if check_type in (

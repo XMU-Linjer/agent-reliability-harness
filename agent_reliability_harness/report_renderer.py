@@ -238,6 +238,9 @@ class ReportRenderer:
             "ad_14_email_password_exfiltration_attempt": ("AD-14", "Email 外传 password", "Email password exfiltration attempt"),
             "ad_15_untrusted_email_recipient_attempt": ("AD-15", "发往不可信域名", "Untrusted email recipient attempt"),
             "ad_16_url_query_secret_exfiltration_attempt": ("AD-16", "搜索/网络请求外传", "URL query secret exfiltration attempt"),
+            "ad_17_cloud_metadata_ssrf_attempt": ("AD-17", "云元数据 SSRF", "Cloud metadata SSRF attempt"),
+            "ad_18_localhost_probe_attempt": ("AD-18", "localhost 探测", "Localhost probe attempt"),
+            "ad_19_private_ip_probe_attempt": ("AD-19", "内网网段探测", "Private IP probe attempt"),
         }
         return labels.get(scenario_id, (scenario_id, scenario_id, scenario_id))
 
@@ -259,7 +262,7 @@ class ReportRenderer:
             "- 不真实执行 shell",
             "- 不真实发送邮件",
             "- 不真实联网",
-            "- 危险路径、危险命令和外传 payload 会在 FakeTool 执行前被拦截",
+            "- 危险路径、危险命令、外传 payload 和 SSRF URL 会在 FakeTool 执行前被拦截",
             "",
         ]
 
@@ -274,7 +277,7 @@ class ReportRenderer:
             "- No real shell execution",
             "- No real email sending",
             "- No real network calls",
-            "- Dangerous paths, commands, and exfiltration payloads are blocked before FakeTool execution",
+            "- Dangerous paths, commands, exfiltration payloads, and SSRF URLs are blocked before FakeTool execution",
             "",
         ]
 

@@ -165,6 +165,20 @@ class TestFailureClassifierPermissionDenied:
         c = FailureClassifier()
         assert c.classify(events) == FailureType.permission_denied
 
+    def test_ssrf_argument_guard_evidence(self) -> None:
+        events = [
+            _evt(EventType.agent_start, scenario_id="unrelated_scenario"),
+            _evt(EventType.argument_guard_decision, {
+                "action": "deny",
+                "check_type": "ssrf_cloud_metadata",
+                "reason": "ssrf_cloud_metadata",
+                "blocked_by": "argument_guard",
+            }, scenario_id="unrelated_scenario"),
+            _evt(EventType.agent_end, scenario_id="unrelated_scenario"),
+        ]
+        c = FailureClassifier()
+        assert c.classify(events) == FailureType.permission_denied
+
 
 class TestFailureClassifierPromptInjection:
     """firewall_decision deny with prompt_injection flag → prompt_injection."""

@@ -12,6 +12,7 @@ FILE_READ_SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "file_read_at
 FILE_WRITE_SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "file_write_attack_scenarios"
 SHELL_SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "shell_attack_scenarios"
 DATA_SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "data_exfiltration_attack_scenarios"
+NETWORK_SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "network_ssrf_attack_scenarios"
 
 
 class TestCliSecurityAlerts:
@@ -153,5 +154,43 @@ class TestCliSecurityAlerts:
         assert "下一步 / Next steps" in stdout
 
         run_dir = tmp_path / "data-cli"
+        assert (run_dir / "report.zh.md").exists()
+        assert (run_dir / "report.en.md").exists()
+
+    def test_network_ssrf_run_prints_security_alerts(
+        self,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        exit_code = main([
+            "run",
+            "--scenarios-dir",
+            str(NETWORK_SCENARIOS_DIR),
+            "--output-dir",
+            str(tmp_path),
+            "--run-id",
+            "network-cli",
+        ])
+
+        assert exit_code == 0
+        stdout = capsys.readouterr().out
+
+        assert "安全告警" in stdout
+        assert "SECURITY ALERT" in stdout
+        assert "AD-17" in stdout
+        assert "AD-18" in stdout
+        assert "AD-19" in stdout
+        assert "http://169.254.169.254/latest/meta-data/" in stdout
+        assert "http://127.0.0.1:8080/admin" in stdout
+        assert "http://10.0.0.1/" in stdout
+        assert "search_web" in stdout
+        assert "argument_guard" in stdout
+        assert "permission_denied" in stdout
+        assert "ssrf_cloud_metadata" in stdout
+        assert "report.zh.md" in stdout
+        assert "report.en.md" in stdout
+        assert "下一步 / Next steps" in stdout
+
+        run_dir = tmp_path / "network-cli"
         assert (run_dir / "report.zh.md").exists()
         assert (run_dir / "report.en.md").exists()
