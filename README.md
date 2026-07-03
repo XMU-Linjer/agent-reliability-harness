@@ -1,37 +1,74 @@
 # AgentReliabilityHarness
 
-AgentReliabilityHarness 是一个离线、确定性的 Agent 运行时可靠性评测框架。
+AgentReliabilityHarness is an offline, deterministic Agent Runtime reliability benchmark and attack-defense lab.
 
-它用 YAML 场景驱动 mock Agent 运行，模拟常见运行时故障，记录 trace，分类 failure type，并生成 `scorecard.json` 与 `report.md`。项目不接真实 LLM API，不执行真实 shell，不联网，适合展示 Agent Runtime / AI Infra 方向的工程能力。
+AgentReliabilityHarness 是一个离线、确定性、可复现的 Agent Runtime 可靠性评测与攻防靶场。
+它通过 YAML 场景模拟 Agent 可能产生的危险 tool call，在 FakeTool 执行前由 RuntimeGuard / ToolFirewall / ArgumentGuard 拦截，并生成终端告警、trace、scorecard 和中英文报告。
 
 ## 核心能力
 
-- YAML ScenarioSpec
-- Mock LLM Provider
+- ScenarioSpec / YAML loader
+- MockLLMProvider
 - Fake Tools
 - RuntimeGuard
 - ToolFirewall
+- ArgumentGuard
 - FaultInjector
 - TraceLogger
 - FailureClassifier
 - BenchmarkRunner
 - ScorecardGenerator
 - ReportRenderer
+- scripts/attack_lab.py
+
+## 快速演示
+
+列出 30 个受控攻防场景：
+
+```powershell
+python scripts\attack_lab.py list
+```
+
+运行代表性场景：
+
+```powershell
+python scripts\attack_lab.py file-read AD-01
+python scripts\attack_lab.py shell AD-09
+python scripts\attack_lab.py data-exfiltration AD-13
+python scripts\attack_lab.py network AD-17
+```
+
+运行后终端会出现安全告警：
+
+```text
+[安全告警 / SECURITY ALERT]
+```
+
+并生成：
+
+```text
+report.zh.md
+report.en.md
+scorecard.json
+trace.jsonl
+```
 
 ## Benchmark 场景
 
-| # | scenario_id | expected failure |
+`scenarios/` 中保留 10 个标准 benchmark 场景，用于验证 Day 1 ~ Day 7 的运行时可靠性链路。
+
+## 30 个攻防 case 覆盖范围
+
+| 分类 | Case 范围 | 示例 |
 |---|---|---|
-| 1 | `normal_agent_run` | `none` |
-| 2 | `model_not_allowed` | `policy_violation` |
-| 3 | `budget_exceeded` | `budget_exceeded` |
-| 4 | `provider_timeout_fallback` | `provider_timeout` |
-| 5 | `high_risk_tool_blocked` | `tool_blocked` |
-| 6 | `write_file_without_permission` | `permission_denied` |
-| 7 | `prompt_injection_tool_escalation` | `prompt_injection` |
-| 8 | `bad_tool_arguments` | `invalid_arguments` |
-| 9 | `duplicate_tool_execution` | `duplicate_execution` |
-| 10 | `unverified_final_answer` | `unverified_answer` |
+| 文件读取 | AD-01 ~ AD-04 | 路径穿越、敏感路径 |
+| 文件写入 | AD-05 ~ AD-08 | 系统路径写入、脚本写入 |
+| 命令执行 | AD-09 ~ AD-12 | rm -rf /、curl 下载 |
+| 数据外传 | AD-13 ~ AD-16 | API key、password、URL secret |
+| 网络 SSRF | AD-17 ~ AD-19 | 云元数据、localhost、内网 IP |
+| 工具权限绕过 | AD-20 ~ AD-22 | allowed_tools、denied_tools、prompt injection |
+| 参数结构 | AD-23 ~ AD-26 | missing/null/non-object/oversized |
+| Agent 行为异常 | AD-27 ~ AD-30 | 重复调用、隐藏 trace、模型切换 |
 
 ## 安装
 
@@ -60,6 +97,15 @@ python -m agent_reliability_harness.cli run --scenarios-dir scenarios --output-d
 ```
 
 命令会批量运行 `scenarios/` 下的 YAML 场景，并生成 scorecard 与 Markdown 报告。
+
+也可以直接运行某一类攻防靶场：
+
+```powershell
+python -m agent_reliability_harness.cli run `
+  --scenarios-dir file_read_attack_scenarios `
+  --output-dir runs/local-file-read `
+  --run-id local-file-read
+```
 
 ## 输出结构
 
@@ -98,30 +144,22 @@ AgentReliabilityHarness 是一个 MVP 级别的离线评测 harness：
 - not a production security platform
 - not a full LLMOps observability product
 
+This project does not perform real attacks. All payloads are inert strings inside YAML scenarios, mock tool calls, traces, reports, and terminal output.
+
+本项目不执行真实攻击。所有 payload 都只是 YAML、mock tool call、trace、report 和终端输出中的惰性字符串。
+项目不会真实执行 shell、不会联网、不会读取系统文件、不会写系统路径、不会发送邮件、不会调用真实模型 API。
+
 它关注“如何复现、记录、分类和汇总 Agent 运行时故障”，不承诺防御所有 prompt injection，也不连接真实 OpenAI、Anthropic、LangChain、AutoGen 或外部服务。
 
-## 架构链路
+## 证据链
 
 ```text
-ScenarioSpec
-  -> MockLLMProvider
-  -> RuntimeGuard
-  -> ToolFirewall
-  -> FaultInjector
-  -> TraceLogger
-  -> FailureClassifier
-  -> BenchmarkRunner
-  -> ScorecardGenerator
-  -> ReportRenderer
+tool_call
+  -> firewall_decision / argument_guard_decision / runtime_guard_decision
+  -> tool_execution_skipped
+  -> failure_classified
+  -> report.zh.md / report.en.md / scorecard.json
 ```
-
-## 简历 bullet 草案
-
-- 设计并实现离线 Agent 运行时可靠性评测框架，通过 YAML ScenarioSpec + PolicySpec 驱动 mock Agent 运行，覆盖 model / tool / budget 等运行时策略校验。
-- 实现 RuntimeGuard 与 ToolFirewall，对模型白名单、token budget、工具 allow/deny list 和工具风险等级进行确定性拦截。
-- 构建 FaultInjector，覆盖 provider timeout、bad arguments、duplicate execution、prompt injection escalation 等故障注入场景。
-- 设计 TraceLogger + FailureClassifier，将运行时事件写入 JSONL trace，并基于 trace evidence 自动分类为 10 种 failure type。
-- 实现 BenchmarkRunner、ScorecardGenerator 与 ReportRenderer，批量运行 10 个标准场景，输出 `scorecard.json` 和 `report.md`。
 
 ## 文档
 
@@ -130,7 +168,6 @@ ScenarioSpec
 - [Benchmark 场景设计](docs/benchmark-design.md)
 - [MVP 计划](docs/mvp-plan.md)
 - [Non-Goals](docs/non-goals.md)
-- [简历定位](docs/resume-positioning.md)
 
 ## License
 

@@ -2,6 +2,8 @@
 
 # Python
 __pycache__/
+.pytest_cache/
+.mypy_cache/
 *.py[cod]
 *$py.class
 *.egg-info/
@@ -27,6 +29,11 @@ Thumbs.db
 # Project outputs
 runs/*/
 !runs/.gitkeep
+*.jsonl
+scorecard.json
+report.md
+report.zh.md
+report.en.md
 
 # Environment
 .env
