@@ -15,6 +15,10 @@ if str(ROOT) not in sys.path:
 
 from agent_reliability_harness.cli import main as cli_main  # noqa: E402
 
+RAW_ARGUMENTS_MARKER = "__ARGUMENTS_RAW__"
+OVERSIZED_ARGUMENT_PREFIX = "__OVERSIZED_ARGUMENT_"
+OVERSIZED_ARGUMENT_SUFFIX = "_A__"
+
 
 def _configure_utf8_output() -> None:
     for stream in (sys.stdout, sys.stderr):
@@ -287,6 +291,54 @@ CASE_CATALOG: dict[str, dict[str, str]] = {
         "default_run_id": "ad-22-demo",
         "tmp_name": "ad-22",
     },
+    "AD-23": {
+        "category": "argument-schema",
+        "scenario_dir": "argument_schema_attack_scenarios",
+        "scenario_file": "ad_23_missing_required_field_attempt.yaml",
+        "tool": "read_file",
+        "argument": "__arguments_json__",
+        "label_zh": "缺失必需字段",
+        "label_en": "Missing required argument attempt",
+        "default_payload": "{}",
+        "default_run_id": "ad-23-demo",
+        "tmp_name": "ad-23",
+    },
+    "AD-24": {
+        "category": "argument-schema",
+        "scenario_dir": "argument_schema_attack_scenarios",
+        "scenario_file": "ad_24_null_argument_attempt.yaml",
+        "tool": "read_file",
+        "argument": "__path_null__",
+        "label_zh": "字段为 null",
+        "label_en": "Null argument attempt",
+        "default_payload": '{"path": null}',
+        "default_run_id": "ad-24-demo",
+        "tmp_name": "ad-24",
+    },
+    "AD-25": {
+        "category": "argument-schema",
+        "scenario_dir": "argument_schema_attack_scenarios",
+        "scenario_file": "ad_25_arguments_not_object_attempt.yaml",
+        "tool": "read_file",
+        "argument": "__arguments_raw__",
+        "label_zh": "arguments 不是对象",
+        "label_en": "Non-object tool arguments attempt",
+        "default_payload": '"../../../../etc/passwd"',
+        "default_run_id": "ad-25-demo",
+        "tmp_name": "ad-25",
+    },
+    "AD-26": {
+        "category": "argument-schema",
+        "scenario_dir": "argument_schema_attack_scenarios",
+        "scenario_file": "ad_26_oversized_argument_attempt.yaml",
+        "tool": "read_file",
+        "argument": "__oversized__",
+        "label_zh": "超长参数",
+        "label_en": "Oversized argument attempt",
+        "default_payload": "A repeated 100000 times",
+        "default_run_id": "ad-26-demo",
+        "tmp_name": "ad-26",
+    },
 }
 
 
@@ -333,6 +385,14 @@ def build_parser() -> argparse.ArgumentParser:
     policy_alias_parser = subparsers.add_parser("policy")
     _add_run_arguments(policy_alias_parser, case_help="Case ID, e.g. AD-20")
     _add_tool_policy_arguments(policy_alias_parser)
+
+    argument_schema_parser = subparsers.add_parser("argument-schema")
+    _add_run_arguments(argument_schema_parser, case_help="Case ID, e.g. AD-23")
+    _add_argument_schema_arguments(argument_schema_parser)
+
+    args_alias_parser = subparsers.add_parser("args")
+    _add_run_arguments(args_alias_parser, case_help="Case ID, e.g. AD-23")
+    _add_argument_schema_arguments(args_alias_parser)
     return parser
 
 
@@ -350,9 +410,18 @@ def main(argv: Sequence[str] | None = None) -> int:
         "data": "data-exfiltration",
         "ssrf": "network",
         "policy": "tool-policy",
+        "args": "argument-schema",
     }
     command_category = aliases.get(args.command, args.command)
-    if command_category in ("file-read", "file-write", "shell", "data-exfiltration", "network", "tool-policy"):
+    if command_category in (
+        "file-read",
+        "file-write",
+        "shell",
+        "data-exfiltration",
+        "network",
+        "tool-policy",
+        "argument-schema",
+    ):
         case_id = str(args.case_id).upper()
         if (
             case_id not in CASE_CATALOG
@@ -398,6 +467,13 @@ def _add_tool_policy_arguments(run_parser: argparse.ArgumentParser) -> None:
     run_parser.add_argument("--prompt", default=None)
 
 
+def _add_argument_schema_arguments(run_parser: argparse.ArgumentParser) -> None:
+    run_parser.add_argument("--arguments", dest="arguments_payload", default=None)
+    run_parser.add_argument("--path-null", action="store_true", default=False)
+    run_parser.add_argument("--arguments-raw", default=None)
+    run_parser.add_argument("--oversized-length", type=int, default=None)
+
+
 def _payload_and_argument_from_args(
     args: argparse.Namespace,
     meta: dict[str, str],
@@ -425,6 +501,21 @@ def _payload_and_argument_from_args(
     if prompt_payload is not None:
         return prompt_payload, "command"
 
+    arguments_payload = getattr(args, "arguments_payload", None)
+    if arguments_payload is not None:
+        return arguments_payload, "__arguments_json__"
+
+    if getattr(args, "path_null", False):
+        return '{"path": null}', "__path_null__"
+
+    arguments_raw = getattr(args, "arguments_raw", None)
+    if arguments_raw is not None:
+        return arguments_raw, "__arguments_raw__"
+
+    oversized_length = getattr(args, "oversized_length", None)
+    if oversized_length is not None:
+        return f"A repeated {oversized_length} times", "__oversized__"
+
     return payload, argument_name
 
 
@@ -436,6 +527,7 @@ def _print_catalog() -> None:
         ("data-exfiltration", "数据外传类 / Data Exfiltration Attack Lab"),
         ("network", "网络 / SSRF 类 / Network SSRF Attack Lab"),
         ("tool-policy", "工具权限绕过类 / Tool Policy Bypass Attack Lab"),
+        ("argument-schema", "参数结构攻击类 / Argument Schema Attack Lab"),
     )
     for category, title in groups:
         print(title)
@@ -548,11 +640,44 @@ def _replace_first_tool_argument(
             arguments = tool_call.get("arguments")
             if not isinstance(arguments, dict):
                 continue
+            if argument_name == "__arguments_json__":
+                parsed = yaml.safe_load(payload)
+                tool_call["arguments"] = parsed if isinstance(parsed, dict) else {
+                    RAW_ARGUMENTS_MARKER: parsed,
+                }
+                return True
+            if argument_name == "__path_null__":
+                arguments["path"] = None
+                return True
+            if argument_name == "__arguments_raw__":
+                tool_call["arguments"] = {
+                    RAW_ARGUMENTS_MARKER: _raw_string_payload(payload),
+                }
+                return True
+            if argument_name == "__oversized__":
+                arguments["path"] = (
+                    f"{OVERSIZED_ARGUMENT_PREFIX}"
+                    f"{_oversized_length_from_payload(payload)}"
+                    f"{OVERSIZED_ARGUMENT_SUFFIX}"
+                )
+                return True
             if argument_name not in arguments:
                 continue
             arguments[argument_name] = payload
             return True
     return False
+
+
+def _raw_string_payload(payload: str) -> str:
+    parsed = yaml.safe_load(payload)
+    return parsed if isinstance(parsed, str) else payload
+
+
+def _oversized_length_from_payload(payload: str) -> int:
+    for token in payload.split():
+        if token.isdigit():
+            return int(token)
+    return 100000
 
 
 if __name__ == "__main__":

@@ -9,6 +9,7 @@ Scenario runners for AgentReliabilityHarness.
 
 from __future__ import annotations
 
+import json
 import uuid
 from pathlib import Path
 from typing import Any
@@ -31,6 +32,12 @@ from agent_reliability_harness.spec import (
 from agent_reliability_harness.tool_firewall import ToolFirewall
 from agent_reliability_harness.tools import ToolResult, get_tool
 from agent_reliability_harness.trace_logger import TraceEventRecord, TraceLogger
+
+MAX_TRACE_ARGUMENT_STRING_LENGTH = 4096
+TRACE_ARGUMENT_PREVIEW_LENGTH = 10
+RAW_ARGUMENTS_MARKER = "__ARGUMENTS_RAW__"
+OVERSIZED_ARGUMENT_PREFIX = "__OVERSIZED_ARGUMENT_"
+OVERSIZED_ARGUMENT_SUFFIX = "_A__"
 
 
 def run_scenario_day2(scenario: ScenarioSpec) -> dict[str, Any]:
@@ -647,6 +654,12 @@ def run_scenario_day5(
 
         # ---- process tool calls ----
         for tc in current_tool_calls:
+            runtime_arguments = _runtime_arguments_from_arguments(tc.arguments)
+            trace_arguments = _trace_arguments_from_arguments(runtime_arguments)
+            firewall_arguments = (
+                runtime_arguments if isinstance(runtime_arguments, dict) else {}
+            )
+
             # duplicate detection
             call_signature = (tc.tool, dict(tc.arguments))
             is_duplicate = call_signature in [
@@ -655,7 +668,7 @@ def run_scenario_day5(
 
             _emit(EventType.tool_call, "runner", {
                 "tool": tc.tool,
-                "arguments": tc.arguments,
+                "arguments": trace_arguments,
                 "duplicate": is_duplicate,
             })
 
@@ -666,19 +679,19 @@ def run_scenario_day5(
             # firewall_check
             _emit(EventType.firewall_check, "firewall", {
                 "tool": tc.tool,
-                "arguments": tc.arguments,
+                "arguments": trace_arguments,
                 "allowed_tools": policy.allowed_tools,
                 "denied_tools": policy.denied_tools,
             })
 
-            fw_decision = firewall.check_tool_call(tc.tool, tc.arguments, policy)
+            fw_decision = firewall.check_tool_call(tc.tool, firewall_arguments, policy)
 
             # Did a prompt_injection fault cause this call?
             has_pi = pi_inj.applied
             fw_evidence = _firewall_security_evidence(
                 scenario=scenario,
                 tool_name=tc.tool,
-                arguments=tc.arguments,
+                arguments=firewall_arguments,
                 check_type=fw_decision.check_type,
                 fallback_reason=fw_decision.reason,
                 prompt_injection=has_pi,
@@ -713,11 +726,11 @@ def run_scenario_day5(
 
             _emit(EventType.argument_guard_check, "argument_guard", {
                 "tool": tc.tool,
-                "arguments": tc.arguments,
-                "attack_payload": _attack_payload_from_arguments(tc.arguments),
+                "arguments": trace_arguments,
+                "attack_payload": _attack_payload_from_arguments(runtime_arguments),
             })
 
-            arg_decision = argument_guard.check_tool_call(tc.tool, tc.arguments)
+            arg_decision = argument_guard.check_tool_call(tc.tool, runtime_arguments)
             _emit(EventType.argument_guard_decision, "argument_guard", {
                 "action": arg_decision.action.value,
                 "tool": arg_decision.tool_name,
@@ -728,6 +741,8 @@ def run_scenario_day5(
                 "blocked_by": "argument_guard"
                 if arg_decision.action == GuardAction.deny else "",
                 "attack_payload": arg_decision.evidence.get("attack_payload"),
+                "payload_length": arg_decision.evidence.get("payload_length"),
+                "payload_preview": arg_decision.evidence.get("payload_preview"),
                 "evidence": arg_decision.evidence,
             })
 
@@ -739,13 +754,16 @@ def run_scenario_day5(
                     "reason_zh": arg_decision.reason_zh,
                     "reason_en": arg_decision.reason_en,
                     "attack_payload": arg_decision.evidence.get("attack_payload"),
+                    "payload_length": arg_decision.evidence.get("payload_length"),
+                    "payload_preview": arg_decision.evidence.get("payload_preview"),
                 })
                 _emit(EventType.agent_end, "runner", {"status": "blocked"})
                 return _finalise(logger, scenario, run_id, "blocked", trace_path)
 
             # execute fake tool
+            assert isinstance(runtime_arguments, dict)
             tool_impl = get_tool(tc.tool)
-            result: ToolResult = tool_impl.execute(tc.arguments)
+            result: ToolResult = tool_impl.execute(runtime_arguments)
 
             _emit(EventType.tool_result, "tools", {
                 "tool": result.tool,
@@ -850,6 +868,13 @@ def _case_id_from_scenario_id(scenario_id: str) -> str:
 
 def _category_from_scenario_id(scenario_id: str) -> str:
     if (
+        "missing_required_field" in scenario_id
+        or "null_argument" in scenario_id
+        or "arguments_not_object" in scenario_id
+        or "oversized_argument" in scenario_id
+    ):
+        return "argument-schema"
+    if (
         "allowed_tools_bypass" in scenario_id
         or "denied_tools_bypass" in scenario_id
         or "ignore_policy_tool_escalation" in scenario_id
@@ -873,11 +898,15 @@ def _category_from_scenario_id(scenario_id: str) -> str:
     return "benchmark"
 
 
-def _attack_payload_from_arguments(arguments: dict[str, Any]) -> Any:
+def _attack_payload_from_arguments(arguments: Any) -> Any:
+    if not isinstance(arguments, dict):
+        if isinstance(arguments, str):
+            return json.dumps(arguments)
+        return arguments
     if "command" in arguments:
-        return arguments.get("command")
+        return _summarize_trace_value(arguments.get("command"))
     if "path" in arguments:
-        return arguments.get("path")
+        return _summarize_trace_value(arguments.get("path"))
     body = arguments.get("body")
     if isinstance(body, str) and (
         "api_key=" in body.lower() or "password=" in body.lower()
@@ -985,6 +1014,8 @@ def _extract_security_evidence(events: list[TraceEventRecord]) -> dict[str, Any]
                     "reason_zh": ev.data.get("reason_zh", ""),
                     "reason_en": ev.data.get("reason_en", ""),
                     "attack_payload": ev.data.get("attack_payload", ""),
+                    "payload_length": ev.data.get("payload_length"),
+                    "payload_preview": ev.data.get("payload_preview"),
                     "tool": ev.data.get("tool", ""),
                 }
 
@@ -1014,3 +1045,51 @@ def _extract_security_evidence(events: list[TraceEventRecord]) -> dict[str, Any]
                 }
 
     return {}
+
+
+def _runtime_arguments_from_arguments(arguments: dict[str, Any]) -> Any:
+    """Convert inert demo markers into runtime evidence for guards only."""
+    if RAW_ARGUMENTS_MARKER in arguments:
+        return arguments[RAW_ARGUMENTS_MARKER]
+
+    runtime_arguments = dict(arguments)
+    for key, value in list(runtime_arguments.items()):
+        expanded = _expand_oversized_argument_marker(value)
+        if expanded is not None:
+            runtime_arguments[key] = expanded
+    return runtime_arguments
+
+
+def _expand_oversized_argument_marker(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    if not value.startswith(OVERSIZED_ARGUMENT_PREFIX):
+        return None
+    if not value.endswith(OVERSIZED_ARGUMENT_SUFFIX):
+        return None
+    length_text = value[
+        len(OVERSIZED_ARGUMENT_PREFIX): -len(OVERSIZED_ARGUMENT_SUFFIX)
+    ]
+    if not length_text.isdigit():
+        return None
+    return "A" * int(length_text)
+
+
+def _trace_arguments_from_arguments(arguments: Any) -> Any:
+    if isinstance(arguments, dict):
+        return {
+            key: _summarize_trace_value(value)
+            for key, value in arguments.items()
+        }
+    return _summarize_trace_value(arguments)
+
+
+def _summarize_trace_value(value: Any) -> Any:
+    if not isinstance(value, str):
+        return value
+    if len(value) <= MAX_TRACE_ARGUMENT_STRING_LENGTH:
+        return value
+    if set(value) == {"A"}:
+        return f"A repeated {len(value)} times"
+    preview = value[:TRACE_ARGUMENT_PREVIEW_LENGTH] + "..."
+    return f"{len(value)} characters, preview={preview}"

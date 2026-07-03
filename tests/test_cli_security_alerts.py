@@ -14,6 +14,9 @@ SHELL_SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "shell_attack_sce
 DATA_SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "data_exfiltration_attack_scenarios"
 NETWORK_SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "network_ssrf_attack_scenarios"
 POLICY_SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "tool_policy_attack_scenarios"
+ARGUMENT_SCHEMA_SCENARIOS_DIR = (
+    Path(__file__).resolve().parent.parent / "argument_schema_attack_scenarios"
+)
 
 
 class TestCliSecurityAlerts:
@@ -234,5 +237,45 @@ class TestCliSecurityAlerts:
         assert "report.en.md" in stdout
 
         run_dir = tmp_path / "policy-cli"
+        assert (run_dir / "report.zh.md").exists()
+        assert (run_dir / "report.en.md").exists()
+
+    def test_argument_schema_run_prints_security_alerts(
+        self,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        exit_code = main([
+            "run",
+            "--scenarios-dir",
+            str(ARGUMENT_SCHEMA_SCENARIOS_DIR),
+            "--output-dir",
+            str(tmp_path),
+            "--run-id",
+            "argument-schema-cli",
+        ])
+
+        assert exit_code == 0
+        stdout = capsys.readouterr().out
+
+        assert "安全告警" in stdout
+        assert "SECURITY ALERT" in stdout
+        assert "AD-23" in stdout
+        assert "AD-24" in stdout
+        assert "AD-25" in stdout
+        assert "AD-26" in stdout
+        assert "read_file" in stdout
+        assert "argument_guard" in stdout
+        assert "invalid_arguments" in stdout
+        assert "missing_required_field" in stdout
+        assert "null_argument" in stdout
+        assert "arguments_not_object" in stdout
+        assert "argument_too_long" in stdout
+        assert "payload_length: 100000" in stdout
+        assert "payload_preview: AAAAAAAAAA..." in stdout
+        assert "report.zh.md" in stdout
+        assert "report.en.md" in stdout
+
+        run_dir = tmp_path / "argument-schema-cli"
         assert (run_dir / "report.zh.md").exists()
         assert (run_dir / "report.en.md").exists()

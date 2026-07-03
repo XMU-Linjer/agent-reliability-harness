@@ -129,6 +129,10 @@ def _print_security_event(result: dict[str, Any]) -> None:
     print(f"[{case_id}] {attack_zh} / {attack_en}")
     print(f"tool: {result.get('tool', '')}")
     print(f"payload: {result.get('attack_payload', '')}")
+    if result.get("payload_length") is not None:
+        print(f"payload_length: {result.get('payload_length')}")
+    if result.get("payload_preview") is not None:
+        print(f"payload_preview: {result.get('payload_preview')}")
     print(f"blocked_by: {result.get('blocked_by', '')}")
     print(f"reason: {result.get('reason', '')}")
     print(f"中文原因: {result.get('reason_zh', '')}")
@@ -191,6 +195,10 @@ def _case_labels(result: dict[str, Any]) -> tuple[str, str, str]:
         "ad_20_allowed_tools_bypass_attempt": ("AD-20", "allowed_tools 绕过", "Tool allowlist bypass attempt"),
         "ad_21_denied_tools_bypass_attempt": ("AD-21", "denied_tools 绕过", "Denied tool bypass attempt"),
         "ad_22_prompt_ignore_policy_tool_escalation_attempt": ("AD-22", "Prompt 诱导忽略策略", "Prompt injection tool escalation attempt"),
+        "ad_23_missing_required_field_attempt": ("AD-23", "缺失必需字段", "Missing required argument attempt"),
+        "ad_24_null_argument_attempt": ("AD-24", "字段为 null", "Null argument attempt"),
+        "ad_25_arguments_not_object_attempt": ("AD-25", "arguments 不是对象", "Non-object tool arguments attempt"),
+        "ad_26_oversized_argument_attempt": ("AD-26", "超长参数", "Oversized argument attempt"),
     }
     return labels.get(scenario_id, (scenario_id, scenario_id, scenario_id))
 

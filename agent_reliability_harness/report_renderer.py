@@ -109,7 +109,7 @@ class ReportRenderer:
                 f"{self._cell(case_id)} | "
                 f"{self._cell(attack_zh)} | "
                 f"{self._cell(result.get('tool', ''))} | "
-                f"{self._cell(result.get('attack_payload', ''))} | "
+                f"{self._cell(self._payload_with_detail(result))} | "
                 f"{self._cell(result.get('blocked_by', ''))} | "
                 f"{self._cell(reason)} | "
                 f"{self._cell(result.get('failure_type', 'unknown'))} | "
@@ -153,7 +153,7 @@ class ReportRenderer:
                 f"{self._cell(case_id)} | "
                 f"{self._cell(attack_en)} | "
                 f"{self._cell(result.get('tool', ''))} | "
-                f"{self._cell(result.get('attack_payload', ''))} | "
+                f"{self._cell(self._payload_with_detail(result))} | "
                 f"{self._cell(result.get('blocked_by', ''))} | "
                 f"{self._cell(reason)} | "
                 f"{self._cell(result.get('failure_type', 'unknown'))} | "
@@ -244,8 +244,23 @@ class ReportRenderer:
             "ad_20_allowed_tools_bypass_attempt": ("AD-20", "allowed_tools 绕过", "Tool allowlist bypass attempt"),
             "ad_21_denied_tools_bypass_attempt": ("AD-21", "denied_tools 绕过", "Denied tool bypass attempt"),
             "ad_22_prompt_ignore_policy_tool_escalation_attempt": ("AD-22", "Prompt 诱导忽略策略", "Prompt injection tool escalation attempt"),
+            "ad_23_missing_required_field_attempt": ("AD-23", "缺失必需字段", "Missing required argument attempt"),
+            "ad_24_null_argument_attempt": ("AD-24", "字段为 null", "Null argument attempt"),
+            "ad_25_arguments_not_object_attempt": ("AD-25", "arguments 不是对象", "Non-object tool arguments attempt"),
+            "ad_26_oversized_argument_attempt": ("AD-26", "超长参数", "Oversized argument attempt"),
         }
         return labels.get(scenario_id, (scenario_id, scenario_id, scenario_id))
+
+    def _payload_with_detail(self, result: dict[str, Any]) -> str:
+        payload = "" if result.get("attack_payload") is None else str(result.get("attack_payload"))
+        details: list[str] = []
+        if result.get("payload_length") is not None:
+            details.append(f"payload_length={result.get('payload_length')}")
+        if result.get("payload_preview") is not None:
+            details.append(f"payload_preview={result.get('payload_preview')}")
+        if details:
+            return f"{payload} ({', '.join(details)})"
+        return payload
 
     def _reason_with_detail(self, reason: Any, detail: Any) -> str:
         reason_text = "" if reason is None else str(reason)

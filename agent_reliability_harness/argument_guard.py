@@ -8,10 +8,14 @@ network requests, or executes commands.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from typing import Any
 
 from agent_reliability_harness.spec import GuardAction
+
+MAX_ARGUMENT_STRING_LENGTH = 4096
+PAYLOAD_PREVIEW_LENGTH = 10
 
 
 @dataclass(frozen=True)
@@ -33,9 +37,19 @@ class ArgumentGuard:
     def check_tool_call(
         self,
         tool_name: str,
-        arguments: dict[str, Any],
+        arguments: Any,
     ) -> ArgumentGuardDecision:
         """Check a mock tool call without touching the real system."""
+        if not isinstance(arguments, dict):
+            return self._deny(
+                tool_name=tool_name,
+                check_type="arguments_not_object",
+                reason="arguments_not_object",
+                reason_zh="检测到 tool arguments 不是对象，已阻止工具执行",
+                reason_en="Non-object tool arguments detected; tool execution was blocked",
+                argument_name="arguments",
+                payload=self._payload_summary(arguments),
+            )
         if tool_name == "read_file":
             return self._check_read_file(arguments)
         if tool_name == "write_file":
@@ -49,12 +63,51 @@ class ArgumentGuard:
         return self._allow(tool_name)
 
     def _check_read_file(self, arguments: dict[str, Any]) -> ArgumentGuardDecision:
+        if "path" not in arguments:
+            return self._deny(
+                tool_name="read_file",
+                check_type="missing_required_field",
+                reason="missing_required_field",
+                reason_zh="检测到缺失必需参数 path，已阻止 read_file 执行",
+                reason_en="Missing required path argument detected; read_file execution was blocked",
+                argument_name="path",
+                payload="{}",
+            )
+
         path = arguments.get("path")
+        if path is None:
+            return self._deny(
+                tool_name="read_file",
+                check_type="null_argument",
+                reason="null_argument",
+                reason_zh="检测到 path 为 null，已阻止 read_file 执行",
+                reason_en="Null path argument detected; read_file execution was blocked",
+                argument_name="path",
+                payload='{"path": null}',
+            )
+
         invalid = self._check_string_value("read_file", "path", path)
         if invalid is not None:
             return invalid
 
         assert isinstance(path, str)
+        if len(path) > MAX_ARGUMENT_STRING_LENGTH:
+            preview = self._preview_string(path)
+            return self._deny(
+                tool_name="read_file",
+                check_type="argument_too_long",
+                reason="argument_too_long",
+                reason_zh="检测到 path 参数过长，已阻止 read_file 执行",
+                reason_en="Oversized path argument detected; read_file execution was blocked",
+                argument_name="path",
+                payload=f"A repeated {len(path)} times"
+                if set(path) == {"A"} else f"{len(path)} characters",
+                extra_evidence={
+                    "payload_length": len(path),
+                    "payload_preview": preview,
+                },
+            )
+
         normalized = path.replace("\\", "/")
         lowered = normalized.lower()
 
@@ -391,7 +444,11 @@ class ArgumentGuard:
         reason_en: str,
         argument_name: str,
         payload: Any,
+        extra_evidence: dict[str, Any] | None = None,
     ) -> ArgumentGuardDecision:
+        evidence = {argument_name: payload, "attack_payload": payload}
+        if extra_evidence:
+            evidence.update(extra_evidence)
         return ArgumentGuardDecision(
             action=GuardAction.deny,
             tool_name=tool_name,
@@ -399,5 +456,14 @@ class ArgumentGuard:
             reason=reason,
             reason_zh=reason_zh,
             reason_en=reason_en,
-            evidence={argument_name: payload, "attack_payload": payload},
+            evidence=evidence,
         )
+
+    def _payload_summary(self, payload: Any) -> Any:
+        if isinstance(payload, str):
+            return json.dumps(payload)
+        return payload
+
+    def _preview_string(self, value: str) -> str:
+        suffix = "..." if len(value) > PAYLOAD_PREVIEW_LENGTH else ""
+        return value[:PAYLOAD_PREVIEW_LENGTH] + suffix

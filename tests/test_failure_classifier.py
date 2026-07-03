@@ -259,6 +259,26 @@ class TestFailureClassifierInvalidArguments:
         c = FailureClassifier()
         assert c.classify(events) == FailureType.invalid_arguments
 
+    def test_argument_guard_schema_reasons(self) -> None:
+        c = FailureClassifier()
+        for reason in (
+            "missing_required_field",
+            "null_argument",
+            "arguments_not_object",
+            "argument_too_long",
+        ):
+            events = [
+                _evt(EventType.agent_start, scenario_id="unrelated_scenario"),
+                _evt(EventType.argument_guard_decision, {
+                    "action": "deny",
+                    "check_type": reason,
+                    "reason": reason,
+                    "blocked_by": "argument_guard",
+                }, scenario_id="unrelated_scenario"),
+                _evt(EventType.agent_end, scenario_id="unrelated_scenario"),
+            ]
+            assert c.classify(events) == FailureType.invalid_arguments
+
 
 class TestFailureClassifierDuplicateExecution:
     """tool_call with duplicate=True → duplicate_execution."""

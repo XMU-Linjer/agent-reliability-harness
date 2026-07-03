@@ -10,6 +10,9 @@ SHELL_SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "shell_attack_sce
 DATA_SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "data_exfiltration_attack_scenarios"
 NETWORK_SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "network_ssrf_attack_scenarios"
 POLICY_SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "tool_policy_attack_scenarios"
+ARGUMENT_SCHEMA_SCENARIOS_DIR = (
+    Path(__file__).resolve().parent.parent / "argument_schema_attack_scenarios"
+)
 
 
 class TestAttackReportsBilingual:
@@ -153,6 +156,44 @@ class TestAttackReportsBilingual:
 
         assert "allowed_tools 绕过" in report_zh_text
         assert "Tool allowlist bypass attempt" in report_en_text
+
+    def test_argument_schema_reports_include_all_cases_and_reason_codes(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        exit_code = main([
+            "run",
+            "--scenarios-dir",
+            str(ARGUMENT_SCHEMA_SCENARIOS_DIR),
+            "--output-dir",
+            str(tmp_path),
+            "--run-id",
+            "argument-schema-report-test",
+        ])
+
+        assert exit_code == 0
+        report_zh_text, report_en_text = _report_texts(
+            tmp_path / "argument-schema-report-test"
+        )
+
+        for text in (report_zh_text, report_en_text):
+            assert "AD-23" in text
+            assert "AD-24" in text
+            assert "AD-25" in text
+            assert "AD-26" in text
+            assert "read_file" in text
+            assert "invalid_arguments" in text
+            assert "missing_required_field" in text
+            assert "null_argument" in text
+            assert "arguments_not_object" in text
+            assert "argument_too_long" in text
+            assert "A repeated 100000 times" in text
+            assert "payload_length=100000" in text
+            assert "payload_preview=AAAAAAAAAA..." in text
+            assert "A" * 100000 not in text
+
+        assert "缺失必需字段" in report_zh_text
+        assert "Missing required argument attempt" in report_en_text
 
 
 def _report_texts(run_dir: Path) -> tuple[str, str]:
