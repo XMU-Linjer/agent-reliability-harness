@@ -80,6 +80,26 @@ class TestFailureClassifierPolicyViolation:
         c = FailureClassifier()
         assert c.classify(events) == FailureType.policy_violation
 
+    def test_runtime_guard_policy_violation_reasons(self) -> None:
+        c = FailureClassifier()
+        for reason in (
+            "hide_trace_request",
+            "trace_suppression_instruction",
+            "disallowed_model_switch",
+            "model_not_allowed",
+        ):
+            events = [
+                _evt(EventType.agent_start, scenario_id="unrelated_scenario"),
+                _evt(EventType.runtime_guard_decision, {
+                    "action": "deny",
+                    "check_type": "runtime_policy",
+                    "reason": reason,
+                    "blocked_by": "runtime_guard",
+                }, scenario_id="unrelated_scenario"),
+                _evt(EventType.agent_end, scenario_id="unrelated_scenario"),
+            ]
+            assert c.classify(events) == FailureType.policy_violation
+
 
 class TestFailureClassifierBudgetExceeded:
     """guard_decision deny with budget evidence → budget_exceeded."""
@@ -278,6 +298,62 @@ class TestFailureClassifierInvalidArguments:
                 _evt(EventType.agent_end, scenario_id="unrelated_scenario"),
             ]
             assert c.classify(events) == FailureType.invalid_arguments
+
+
+class TestFailureClassifierAgentBehavior:
+    def test_repeated_expensive_tool_call(self) -> None:
+        events = [
+            _evt(EventType.agent_start, scenario_id="unrelated_scenario"),
+            _evt(EventType.tool_execution_skipped, {
+                "tool": "search_web",
+                "blocked_by": "runner",
+                "reason": "repeated_expensive_tool_call",
+            }, scenario_id="unrelated_scenario"),
+            _evt(EventType.agent_end, scenario_id="unrelated_scenario"),
+        ]
+        c = FailureClassifier()
+        assert c.classify(events) == FailureType.duplicate_execution
+
+    def test_duplicate_tool_execution_reason(self) -> None:
+        events = [
+            _evt(EventType.agent_start, scenario_id="unrelated_scenario"),
+            _evt(EventType.tool_execution_skipped, {
+                "tool": "read_file",
+                "blocked_by": "runner",
+                "reason": "duplicate_tool_execution",
+            }, scenario_id="unrelated_scenario"),
+            _evt(EventType.agent_end, scenario_id="unrelated_scenario"),
+        ]
+        c = FailureClassifier()
+        assert c.classify(events) == FailureType.duplicate_execution
+
+    def test_missing_trace_evidence(self) -> None:
+        events = [
+            _evt(EventType.agent_start, scenario_id="unrelated_scenario"),
+            _evt(EventType.runtime_guard_decision, {
+                "action": "deny",
+                "check_type": "answer_verification",
+                "reason": "missing_trace_evidence",
+                "blocked_by": "runtime_guard",
+            }, scenario_id="unrelated_scenario"),
+            _evt(EventType.agent_end, scenario_id="unrelated_scenario"),
+        ]
+        c = FailureClassifier()
+        assert c.classify(events) == FailureType.unverified_answer
+
+    def test_unverified_answer_reason(self) -> None:
+        events = [
+            _evt(EventType.agent_start, scenario_id="unrelated_scenario"),
+            _evt(EventType.runtime_guard_decision, {
+                "action": "deny",
+                "check_type": "answer_verification",
+                "reason": "unverified_answer",
+                "blocked_by": "runtime_guard",
+            }, scenario_id="unrelated_scenario"),
+            _evt(EventType.agent_end, scenario_id="unrelated_scenario"),
+        ]
+        c = FailureClassifier()
+        assert c.classify(events) == FailureType.unverified_answer
 
 
 class TestFailureClassifierDuplicateExecution:

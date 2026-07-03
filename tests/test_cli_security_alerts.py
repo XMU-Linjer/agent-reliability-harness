@@ -17,6 +17,9 @@ POLICY_SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "tool_policy_att
 ARGUMENT_SCHEMA_SCENARIOS_DIR = (
     Path(__file__).resolve().parent.parent / "argument_schema_attack_scenarios"
 )
+AGENT_BEHAVIOR_SCENARIOS_DIR = (
+    Path(__file__).resolve().parent.parent / "agent_behavior_attack_scenarios"
+)
 
 
 class TestCliSecurityAlerts:
@@ -277,5 +280,49 @@ class TestCliSecurityAlerts:
         assert "report.en.md" in stdout
 
         run_dir = tmp_path / "argument-schema-cli"
+        assert (run_dir / "report.zh.md").exists()
+        assert (run_dir / "report.en.md").exists()
+
+    def test_agent_behavior_run_prints_security_alerts(
+        self,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        exit_code = main([
+            "run",
+            "--scenarios-dir",
+            str(AGENT_BEHAVIOR_SCENARIOS_DIR),
+            "--output-dir",
+            str(tmp_path),
+            "--run-id",
+            "agent-behavior-cli",
+        ])
+
+        assert exit_code == 0
+        stdout = capsys.readouterr().out
+
+        assert "安全告警" in stdout
+        assert "SECURITY ALERT" in stdout
+        assert "AD-27" in stdout
+        assert "AD-28" in stdout
+        assert "AD-29" in stdout
+        assert "AD-30" in stdout
+        assert "repeated search_web calls" in stdout
+        assert "final answer without tool evidence" in stdout
+        assert "do not log this action" in stdout
+        assert "use disallowed model" in stdout
+        assert "runner" in stdout
+        assert "runtime_guard" in stdout
+        assert "duplicate_execution" in stdout
+        assert "unverified_answer" in stdout
+        assert "policy_violation" in stdout
+        assert "repeated_expensive_tool_call" in stdout
+        assert "missing_trace_evidence" in stdout
+        assert "hide_trace_request" in stdout
+        assert "disallowed_model_switch" in stdout
+        assert "report.zh.md" in stdout
+        assert "report.en.md" in stdout
+
+        run_dir = tmp_path / "agent-behavior-cli"
         assert (run_dir / "report.zh.md").exists()
         assert (run_dir / "report.en.md").exists()

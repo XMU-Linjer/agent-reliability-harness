@@ -25,16 +25,27 @@ class FailureClassifier:
                     pass
 
         for ev in events:
-            if ev.event_type == EventType.guard_decision:
+            if ev.event_type in (
+                EventType.guard_decision,
+                EventType.runtime_guard_decision,
+            ):
                 if ev.data.get("action") != "deny":
                     continue
                 check_type = ev.data.get("check_type", "")
                 reason = ev.data.get("reason", "")
-                if check_type == "model" or "not in the allowed models" in reason:
+                if check_type == "model" or reason in (
+                    "hide_trace_request",
+                    "trace_suppression_instruction",
+                    "disallowed_model_switch",
+                    "model_not_allowed",
+                ) or "not in the allowed models" in reason:
                     return FailureType.policy_violation
 
         for ev in events:
-            if ev.event_type == EventType.guard_decision:
+            if ev.event_type in (
+                EventType.guard_decision,
+                EventType.runtime_guard_decision,
+            ):
                 if ev.data.get("action") != "deny":
                     continue
                 check_type = ev.data.get("check_type", "")
@@ -176,14 +187,30 @@ class FailureClassifier:
                     return FailureType.invalid_arguments
 
         for ev in events:
+            if ev.event_type == EventType.tool_execution_skipped:
+                reason = ev.data.get("reason", "")
+                if reason in (
+                    "repeated_expensive_tool_call",
+                    "duplicate_tool_execution",
+                ):
+                    return FailureType.duplicate_execution
+
+        for ev in events:
             if ev.event_type == EventType.tool_call and ev.data.get("duplicate"):
                 return FailureType.duplicate_execution
 
         for ev in events:
-            if ev.event_type == EventType.guard_decision:
+            if ev.event_type in (
+                EventType.guard_decision,
+                EventType.runtime_guard_decision,
+            ):
                 action = ev.data.get("action", "")
                 check_type = ev.data.get("check_type", "")
-                if action == "deny" and check_type == "answer_verification":
+                reason = ev.data.get("reason", "")
+                if action == "deny" and (
+                    check_type == "answer_verification"
+                    or reason in ("missing_trace_evidence", "unverified_answer")
+                ):
                     return FailureType.unverified_answer
 
         return FailureType.none

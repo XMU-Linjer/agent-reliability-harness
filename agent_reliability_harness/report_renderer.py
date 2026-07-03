@@ -248,6 +248,10 @@ class ReportRenderer:
             "ad_24_null_argument_attempt": ("AD-24", "字段为 null", "Null argument attempt"),
             "ad_25_arguments_not_object_attempt": ("AD-25", "arguments 不是对象", "Non-object tool arguments attempt"),
             "ad_26_oversized_argument_attempt": ("AD-26", "超长参数", "Oversized argument attempt"),
+            "ad_27_repeated_expensive_tool_call_attempt": ("AD-27", "重复高成本工具调用", "Repeated expensive tool call attempt"),
+            "ad_28_unverified_final_answer_attempt": ("AD-28", "未经工具验证直接回答", "Unverified final answer attempt"),
+            "ad_29_hide_trace_instruction_attempt": ("AD-29", "输出要求隐藏 trace", "Trace suppression instruction attempt"),
+            "ad_30_disallowed_model_switch_attempt": ("AD-30", "模型试图切换模型", "Disallowed model switch attempt"),
         }
         return labels.get(scenario_id, (scenario_id, scenario_id, scenario_id))
 

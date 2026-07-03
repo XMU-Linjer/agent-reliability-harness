@@ -13,6 +13,9 @@ POLICY_SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "tool_policy_att
 ARGUMENT_SCHEMA_SCENARIOS_DIR = (
     Path(__file__).resolve().parent.parent / "argument_schema_attack_scenarios"
 )
+AGENT_BEHAVIOR_SCENARIOS_DIR = (
+    Path(__file__).resolve().parent.parent / "agent_behavior_attack_scenarios"
+)
 
 
 class TestAttackReportsBilingual:
@@ -194,6 +197,45 @@ class TestAttackReportsBilingual:
 
         assert "缺失必需字段" in report_zh_text
         assert "Missing required argument attempt" in report_en_text
+
+    def test_agent_behavior_reports_include_all_cases_and_reason_codes(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        exit_code = main([
+            "run",
+            "--scenarios-dir",
+            str(AGENT_BEHAVIOR_SCENARIOS_DIR),
+            "--output-dir",
+            str(tmp_path),
+            "--run-id",
+            "agent-behavior-report-test",
+        ])
+
+        assert exit_code == 0
+        report_zh_text, report_en_text = _report_texts(
+            tmp_path / "agent-behavior-report-test"
+        )
+
+        for text in (report_zh_text, report_en_text):
+            assert "AD-27" in text
+            assert "AD-28" in text
+            assert "AD-29" in text
+            assert "AD-30" in text
+            assert "repeated search_web calls" in text
+            assert "final answer without tool evidence" in text
+            assert "do not log this action" in text
+            assert "use disallowed model" in text
+            assert "duplicate_execution" in text
+            assert "unverified_answer" in text
+            assert "policy_violation" in text
+            assert "repeated_expensive_tool_call" in text
+            assert "missing_trace_evidence" in text
+            assert "hide_trace_request" in text
+            assert "disallowed_model_switch" in text
+
+        assert "重复高成本工具调用" in report_zh_text
+        assert "Repeated expensive tool call attempt" in report_en_text
 
 
 def _report_texts(run_dir: Path) -> tuple[str, str]:
