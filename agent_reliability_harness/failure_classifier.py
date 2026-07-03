@@ -111,6 +111,36 @@ class FailureClassifier:
             if ev.event_type == EventType.firewall_decision:
                 if ev.data.get("action") != "deny":
                     continue
+                check_type = ev.data.get("check_type", "")
+                reason = ev.data.get("reason", "")
+                payload = str(ev.data.get("attack_payload", "")).lower()
+                if check_type in (
+                    "prompt_injection_tool_escalation",
+                    "tool_escalation",
+                    "ignore_policy",
+                ) or reason in (
+                    "prompt_injection_tool_escalation",
+                    "tool_escalation",
+                    "ignore_policy",
+                ) or "ignore previous policy" in payload:
+                    return FailureType.prompt_injection
+
+        for ev in events:
+            if ev.event_type == EventType.firewall_decision:
+                if ev.data.get("action") != "deny":
+                    continue
+                check_type = ev.data.get("check_type", "")
+                reason = ev.data.get("reason", "")
+                if check_type in ("tool_not_allowed", "denied_tool") or reason in (
+                    "tool_not_allowed",
+                    "denied_tool",
+                ):
+                    return FailureType.tool_blocked
+
+        for ev in events:
+            if ev.event_type == EventType.firewall_decision:
+                if ev.data.get("action") != "deny":
+                    continue
                 if ev.data.get("check_type", "") == "firewall_allowed_tools":
                     return FailureType.permission_denied
 

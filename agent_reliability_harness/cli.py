@@ -188,6 +188,9 @@ def _case_labels(result: dict[str, Any]) -> tuple[str, str, str]:
         "ad_17_cloud_metadata_ssrf_attempt": ("AD-17", "云元数据 SSRF", "Cloud metadata SSRF attempt"),
         "ad_18_localhost_probe_attempt": ("AD-18", "localhost 探测", "Localhost probe attempt"),
         "ad_19_private_ip_probe_attempt": ("AD-19", "内网网段探测", "Private IP probe attempt"),
+        "ad_20_allowed_tools_bypass_attempt": ("AD-20", "allowed_tools 绕过", "Tool allowlist bypass attempt"),
+        "ad_21_denied_tools_bypass_attempt": ("AD-21", "denied_tools 绕过", "Denied tool bypass attempt"),
+        "ad_22_prompt_ignore_policy_tool_escalation_attempt": ("AD-22", "Prompt 诱导忽略策略", "Prompt injection tool escalation attempt"),
     }
     return labels.get(scenario_id, (scenario_id, scenario_id, scenario_id))
 
