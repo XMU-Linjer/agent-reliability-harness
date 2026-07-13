@@ -1,4 +1,4 @@
-"""Tests for agent_reliability_harness.spec — Day 1 coverage."""
+﻿"""Tests for agent_reliability_harness.spec — Day 1 coverage."""
 
 from pathlib import Path
 from typing import Any
@@ -6,7 +6,7 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
-from agent_reliability_harness.spec import (
+from benchmark.spec import (
     AgentRunSpec,
     EventType,
     FailureType,
@@ -18,7 +18,7 @@ from agent_reliability_harness.spec import (
     load_scenarios,
 )
 
-SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "scenarios"
+SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "benchmark" / "scenarios"
 
 
 # ---------------------------------------------------------------------------

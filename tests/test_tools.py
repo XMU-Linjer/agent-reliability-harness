@@ -1,4 +1,4 @@
-"""Tests for fake tool system — Day 2 coverage."""
+﻿"""Tests for fake tool system — Day 2 coverage."""
 
 from __future__ import annotations
 
@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from agent_reliability_harness.spec import ToolRiskLevel
-from agent_reliability_harness.tools import (
+from benchmark.spec import ToolRiskLevel
+from benchmark.fake_tools import (
     FakeTool,
     ToolNotFoundError,
     ToolResult,

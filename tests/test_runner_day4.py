@@ -1,18 +1,18 @@
-"""Tests for Day 4 scenario runner — FaultInjector integration."""
+﻿"""Tests for Day 4 scenario runner — FaultInjector integration."""
 
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
 
-from agent_reliability_harness.runner import (
+from benchmark.runner import (
     run_scenario_day2,
     run_scenario_day3,
     run_scenario_day4,
 )
-from agent_reliability_harness.spec import load_scenario
+from benchmark.spec import load_scenario
 
-SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "scenarios"
+SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "benchmark" / "scenarios"
 
 
 # ---------------------------------------------------------------------------

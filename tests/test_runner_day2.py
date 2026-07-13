@@ -1,14 +1,14 @@
-"""Tests for Day 2 minimal scenario runner."""
+﻿"""Tests for Day 2 minimal scenario runner."""
 
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
 
-from agent_reliability_harness.runner import run_scenario_day2
-from agent_reliability_harness.spec import load_scenario
+from benchmark.runner import run_scenario_day2
+from benchmark.spec import load_scenario
 
-SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "scenarios"
+SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "benchmark" / "scenarios"
 
 
 class TestRunNormalScenario:

@@ -1,4 +1,4 @@
-"""Tests for TraceLogger — Day 5 coverage."""
+﻿"""Tests for TraceLogger — Day 5 coverage."""
 
 from __future__ import annotations
 
@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from agent_reliability_harness.spec import EventType
-from agent_reliability_harness.trace_logger import TraceEventRecord, TraceLogger
+from benchmark.spec import EventType
+from agent_guard.trace.trace_logger import TraceEventRecord, TraceLogger
 
 
 @pytest.fixture()
@@ -216,7 +216,7 @@ class TestNoDatabase:
     """Ensure TraceLogger does not use a database."""
 
     def test_no_sqlite_import(self) -> None:
-        import agent_reliability_harness.trace_logger as mod
+        import agent_guard.trace.trace_logger as mod
         mod_file = mod.__file__
         assert mod_file is not None
         source = Path(mod_file).read_text(encoding="utf-8")
@@ -224,7 +224,7 @@ class TestNoDatabase:
         assert "database" not in source.lower()
 
     def test_no_sqlalchemy_import(self) -> None:
-        import agent_reliability_harness.trace_logger as mod
+        import agent_guard.trace.trace_logger as mod
         mod_file = mod.__file__
         assert mod_file is not None
         source = Path(mod_file).read_text(encoding="utf-8")

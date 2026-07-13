@@ -11,16 +11,16 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
-SCRIPT = ROOT / "scripts" / "attack_lab.py"
-SOURCE_AD01 = ROOT / "file_read_attack_scenarios" / "ad_01_path_traversal_read_attempt.yaml"
-SOURCE_AD05 = ROOT / "file_write_attack_scenarios" / "ad_05_windows_system_path_write_attempt.yaml"
-SOURCE_AD10 = ROOT / "shell_attack_scenarios" / "ad_10_read_system_file_command_attempt.yaml"
-SOURCE_AD16 = ROOT / "data_exfiltration_attack_scenarios" / "ad_16_url_query_secret_exfiltration_attempt.yaml"
-SOURCE_AD18 = ROOT / "network_ssrf_attack_scenarios" / "ad_18_localhost_probe_attempt.yaml"
-SOURCE_AD22 = ROOT / "tool_policy_attack_scenarios" / "ad_22_prompt_ignore_policy_tool_escalation_attempt.yaml"
-SOURCE_AD23 = ROOT / "argument_schema_attack_scenarios" / "ad_23_missing_required_field_attempt.yaml"
-SOURCE_AD26 = ROOT / "argument_schema_attack_scenarios" / "ad_26_oversized_argument_attempt.yaml"
-SOURCE_AD29 = ROOT / "agent_behavior_attack_scenarios" / "ad_29_hide_trace_instruction_attempt.yaml"
+SCRIPT = ROOT / "benchmark" / "scripts" / "attack_lab.py"
+SOURCE_AD01 = ROOT / "benchmark/scenarios/file_read_attack" / "ad_01_path_traversal_read_attempt.yaml"
+SOURCE_AD05 = ROOT / "benchmark/scenarios/file_write_attack" / "ad_05_windows_system_path_write_attempt.yaml"
+SOURCE_AD10 = ROOT / "benchmark/scenarios/shell_attack" / "ad_10_read_system_file_command_attempt.yaml"
+SOURCE_AD16 = ROOT / "benchmark/scenarios/data_exfiltration_attack" / "ad_16_url_query_secret_exfiltration_attempt.yaml"
+SOURCE_AD18 = ROOT / "benchmark/scenarios/network_ssrf_attack" / "ad_18_localhost_probe_attempt.yaml"
+SOURCE_AD22 = ROOT / "benchmark/scenarios/tool_policy_attack" / "ad_22_prompt_ignore_policy_tool_escalation_attempt.yaml"
+SOURCE_AD23 = ROOT / "benchmark/scenarios/argument_schema_attack" / "ad_23_missing_required_field_attempt.yaml"
+SOURCE_AD26 = ROOT / "benchmark/scenarios/argument_schema_attack" / "ad_26_oversized_argument_attempt.yaml"
+SOURCE_AD29 = ROOT / "benchmark/scenarios/agent_behavior_attack" / "ad_29_hide_trace_instruction_attempt.yaml"
 
 
 def _run_script(args: list[str]) -> subprocess.CompletedProcess[str]:

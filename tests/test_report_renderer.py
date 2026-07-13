@@ -1,4 +1,4 @@
-"""Tests for Day 7 Markdown report rendering."""
+﻿"""Tests for Day 7 Markdown report rendering."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from agent_reliability_harness.report_renderer import ReportRenderer
+from benchmark.report_renderer import ReportRenderer
 
 
 def _scorecard() -> dict[str, Any]:

@@ -1,4 +1,4 @@
-"""Tests for BenchmarkRunner — Day 6 coverage."""
+﻿"""Tests for BenchmarkRunner — Day 6 coverage."""
 
 from __future__ import annotations
 
@@ -7,16 +7,16 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
-from agent_reliability_harness.benchmark_runner import BenchmarkRunner, BenchmarkRunResult
-from agent_reliability_harness.runner import (
+from benchmark.benchmark_runner import BenchmarkRunner, BenchmarkRunResult
+from benchmark.runner import (
     run_scenario_day2,
     run_scenario_day3,
     run_scenario_day4,
     run_scenario_day5,
 )
-from agent_reliability_harness.spec import ScenarioSpec, load_scenario
+from benchmark.spec import ScenarioSpec, load_scenario
 
-SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "scenarios"
+SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "benchmark" / "scenarios"
 
 
 # ---------------------------------------------------------------------------
@@ -174,7 +174,7 @@ class TestErrorResilience:
                 raise RuntimeError("Simulated crash")
             return original(scenario, output_dir=output_dir)
 
-        with patch("agent_reliability_harness.benchmark_runner.run_scenario_day5", _patched):
+        with patch("benchmark.benchmark_runner.run_scenario_day5", _patched):
             runner = BenchmarkRunner(SCENARIOS_DIR, tmp_path)
             result = runner.run()
 
@@ -199,7 +199,7 @@ class TestErrorResilience:
                 raise ValueError("Something went wrong")
             return original(scenario, output_dir=output_dir)
 
-        with patch("agent_reliability_harness.benchmark_runner.run_scenario_day5", _patched):
+        with patch("benchmark.benchmark_runner.run_scenario_day5", _patched):
             runner = BenchmarkRunner(SCENARIOS_DIR, tmp_path)
             result = runner.run()
 

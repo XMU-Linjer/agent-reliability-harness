@@ -1,4 +1,4 @@
-"""Tests for ScorecardGenerator — Day 6 coverage."""
+﻿"""Tests for ScorecardGenerator — Day 6 coverage."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from agent_reliability_harness.scorecard import ScorecardGenerator
+from benchmark.scorecard import ScorecardGenerator
 
 
 # ---------------------------------------------------------------------------

@@ -1,9 +1,9 @@
-"""Unit tests for ArgumentGuard file write checks."""
+﻿"""Unit tests for ArgumentGuard file write checks."""
 
 from __future__ import annotations
 
-from agent_reliability_harness.argument_guard import ArgumentGuard
-from agent_reliability_harness.spec import GuardAction
+from agent_guard.guards.argument_guard import ArgumentGuard
+from benchmark.spec import GuardAction
 
 
 class TestArgumentGuardFileWrite:

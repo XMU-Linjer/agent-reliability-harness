@@ -1,4 +1,4 @@
-"""Tests for the minimal Day 7 CLI."""
+﻿"""Tests for the minimal Day 7 CLI."""
 
 from __future__ import annotations
 
@@ -8,9 +8,9 @@ from typing import Any
 
 import pytest
 
-from agent_reliability_harness.cli import main
+from benchmark.cli import main
 
-SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "scenarios"
+SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "benchmark" / "scenarios"
 
 
 class TestCliRun:

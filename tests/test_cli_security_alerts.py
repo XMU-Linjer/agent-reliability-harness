@@ -1,4 +1,4 @@
-"""Tests for CLI security alert output."""
+﻿"""Tests for CLI security alert output."""
 
 from __future__ import annotations
 
@@ -6,19 +6,19 @@ from pathlib import Path
 
 import pytest
 
-from agent_reliability_harness.cli import main
+from benchmark.cli import main
 
-FILE_READ_SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "file_read_attack_scenarios"
-FILE_WRITE_SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "file_write_attack_scenarios"
-SHELL_SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "shell_attack_scenarios"
-DATA_SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "data_exfiltration_attack_scenarios"
-NETWORK_SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "network_ssrf_attack_scenarios"
-POLICY_SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "tool_policy_attack_scenarios"
+FILE_READ_SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "benchmark/scenarios/file_read_attack"
+FILE_WRITE_SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "benchmark/scenarios/file_write_attack"
+SHELL_SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "benchmark/scenarios/shell_attack"
+DATA_SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "benchmark/scenarios/data_exfiltration_attack"
+NETWORK_SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "benchmark/scenarios/network_ssrf_attack"
+POLICY_SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "benchmark/scenarios/tool_policy_attack"
 ARGUMENT_SCHEMA_SCENARIOS_DIR = (
-    Path(__file__).resolve().parent.parent / "argument_schema_attack_scenarios"
+    Path(__file__).resolve().parent.parent / "benchmark/scenarios/argument_schema_attack"
 )
 AGENT_BEHAVIOR_SCENARIOS_DIR = (
-    Path(__file__).resolve().parent.parent / "agent_behavior_attack_scenarios"
+    Path(__file__).resolve().parent.parent / "benchmark/scenarios/agent_behavior_attack"
 )
 
 

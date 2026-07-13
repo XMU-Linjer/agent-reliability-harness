@@ -1,10 +1,10 @@
-"""Tests for ToolFirewall — Day 3."""
+﻿"""Tests for ToolFirewall — Day 3."""
 
 from __future__ import annotations
 
-from agent_reliability_harness.runtime_guard import GuardDecision
-from agent_reliability_harness.spec import GuardAction, PolicySpec, ToolRiskLevel
-from agent_reliability_harness.tool_firewall import ToolFirewall, _risk_exceeds
+from agent_guard.guards.runtime_guard import GuardDecision
+from benchmark.spec import GuardAction, PolicySpec, ToolRiskLevel
+from agent_guard.guards.tool_firewall import ToolFirewall, _risk_exceeds
 
 
 def _make_policy(**overrides) -> PolicySpec:

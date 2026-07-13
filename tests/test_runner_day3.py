@@ -1,14 +1,14 @@
-"""Tests for Day 3 scenario runner — RuntimeGuard + ToolFirewall integration."""
+﻿"""Tests for Day 3 scenario runner — RuntimeGuard + ToolFirewall integration."""
 
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
 
-from agent_reliability_harness.runner import run_scenario_day2, run_scenario_day3
-from agent_reliability_harness.spec import load_scenario
+from benchmark.runner import run_scenario_day2, run_scenario_day3
+from benchmark.spec import load_scenario
 
-SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "scenarios"
+SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "benchmark" / "scenarios"
 
 
 # ---------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-"""End-to-end tests for shell command attack scenarios."""
+﻿"""End-to-end tests for shell command attack scenarios."""
 
 from __future__ import annotations
 
@@ -6,10 +6,10 @@ import json
 from pathlib import Path
 from typing import Any
 
-from agent_reliability_harness.benchmark_runner import BenchmarkRunner
-from agent_reliability_harness.spec import load_scenarios
+from benchmark.benchmark_runner import BenchmarkRunner
+from benchmark.spec import load_scenarios
 
-SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "shell_attack_scenarios"
+SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "benchmark/scenarios/shell_attack"
 
 
 def _trace_events(result: dict[str, Any]) -> list[dict[str, Any]]:

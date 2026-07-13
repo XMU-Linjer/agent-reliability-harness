@@ -1,12 +1,12 @@
-"""Tests for FailureClassifier — Day 5 coverage."""
+﻿"""Tests for FailureClassifier — Day 5 coverage."""
 
 from __future__ import annotations
 
 from typing import Any
 
-from agent_reliability_harness.failure_classifier import FailureClassifier
-from agent_reliability_harness.spec import EventType, FailureType
-from agent_reliability_harness.trace_logger import TraceEventRecord
+from agent_guard.trace.failure_classifier import FailureClassifier
+from benchmark.spec import EventType, FailureType
+from agent_guard.trace.trace_logger import TraceEventRecord
 
 
 def _evt(

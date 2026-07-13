@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "agent-reliability-harness"
-version = "0.1.0"
-description = "Offline-first Agent Runtime reliability benchmark framework with Spec + Guard + Fault Injection + Trace + Scorecard"
+name = "agent-guard"
+version = "0.2.0"
+description = "Runtime safety guard SDK for AI Agents — pluggable tool-call firewall, argument guard, and trace auditing"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"
@@ -36,6 +36,9 @@ dependencies = [
     "typer>=0.12",
     "rich>=13.0",
     "jinja2>=3.1",
+    "openai>=1.0",
+    "python-dotenv>=1.0",
+    "requests>=2.31",
 ]
 
 [project.optional-dependencies]
@@ -47,7 +50,7 @@ dev = [
 ]
 
 [project.scripts]
-arh = "agent_reliability_harness.cli:main"
+arh = "benchmark.cli:main"
 
 [tool.ruff]
 target-version = "py311"

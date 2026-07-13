@@ -1,9 +1,9 @@
-"""Tests for RuntimeGuard — Day 3."""
+﻿"""Tests for RuntimeGuard — Day 3."""
 
 from __future__ import annotations
 
-from agent_reliability_harness.runtime_guard import GuardDecision, RuntimeGuard
-from agent_reliability_harness.spec import GuardAction, PolicySpec, ToolRiskLevel
+from agent_guard.guards.runtime_guard import GuardDecision, RuntimeGuard
+from benchmark.spec import GuardAction, PolicySpec, ToolRiskLevel
 
 
 def _make_policy(**overrides) -> PolicySpec:

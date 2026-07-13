@@ -1,11 +1,11 @@
-"""Tests for MockLLMProvider — Day 2 coverage."""
+﻿"""Tests for MockLLMProvider — Day 2 coverage."""
 
 from __future__ import annotations
 
 import pytest
 
-from agent_reliability_harness.mock_llm import MockLLMProvider, MockLLMResponseExhausted
-from agent_reliability_harness.spec import MockResponse, MockToolCall
+from benchmark.mock_llm import MockLLMProvider, MockLLMResponseExhausted
+from benchmark.spec import MockResponse, MockToolCall
 
 
 class TestMockLLMProvider:

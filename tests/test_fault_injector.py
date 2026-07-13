@@ -1,15 +1,15 @@
-"""Tests for FaultInjector — Day 4."""
+﻿"""Tests for FaultInjector — Day 4."""
 
 from __future__ import annotations
 
 import pytest
 
-from agent_reliability_harness.fault_injector import (
+from benchmark.fault_injector import (
     FaultInjectionResult,
     FaultInjector,
     ProviderTimeoutInjected,
 )
-from agent_reliability_harness.spec import FaultInjectionSpec, MockToolCall
+from benchmark.spec import FaultInjectionSpec, MockToolCall
 
 
 # ---------------------------------------------------------------------------
