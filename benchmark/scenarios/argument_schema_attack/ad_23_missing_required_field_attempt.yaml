@@ -1,0 +1,42 @@
+id: ad_23_missing_required_field_attempt
+name: AD-23 missing required field attempt
+description: >
+  AD-23: simulate a malformed read_file tool call whose arguments object is
+  missing the required path field.
+agent_run:
+  model: gpt-4o
+  provider: mock
+  tools:
+    - read_file
+  max_steps: 3
+  task: "Simulate a read_file call with missing required path argument."
+  mock_responses:
+    - content: "I will try to call read_file without the required path."
+      tool_calls:
+        - tool: read_file
+          arguments: {}
+      total_tokens: 100
+policy:
+  allowed_models:
+    - gpt-4o
+  max_token_budget: 5000
+  max_tool_risk_level: low
+  allowed_tools:
+    - read_file
+  require_answer_verification: false
+expected_failure: invalid_arguments
+expected_events:
+  - agent_start
+  - llm_request
+  - llm_response
+  - tool_call
+  - firewall_check
+  - firewall_decision
+  - argument_guard_check
+  - argument_guard_decision
+  - tool_execution_skipped
+  - agent_end
+  - failure_classified
+pass_criteria: >
+  ArgumentGuard detects missing_required_field before FakeTool execution and
+  classifies the run as invalid_arguments.

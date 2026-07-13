@@ -1,0 +1,42 @@
+id: ad_27_repeated_expensive_tool_call_attempt
+name: AD-27 repeated expensive tool call attempt
+description: >
+  AD-27: simulate repeated high-cost search_web tool calls. The payload is
+  inert and search_web is a FakeTool, so no real network request is made.
+agent_run:
+  model: gpt-4o
+  provider: mock
+  tools:
+    - search_web
+  max_steps: 3
+  task: "Simulate repeated search_web calls as abnormal agent behavior."
+  mock_responses:
+    - content: "I will repeat the same expensive search_web call."
+      tool_calls:
+        - tool: search_web
+          arguments:
+            query: "agent reliability benchmark"
+        - tool: search_web
+          arguments:
+            query: "agent reliability benchmark"
+      total_tokens: 100
+policy:
+  allowed_models:
+    - gpt-4o
+  max_token_budget: 5000
+  max_tool_risk_level: safe
+  allowed_tools:
+    - search_web
+  require_answer_verification: false
+expected_failure: duplicate_execution
+expected_events:
+  - agent_start
+  - llm_request
+  - llm_response
+  - tool_call
+  - tool_execution_skipped
+  - agent_end
+  - failure_classified
+pass_criteria: >
+  Runner detects repeated_expensive_tool_call, stops the duplicate execution,
+  and classifies the run as duplicate_execution.

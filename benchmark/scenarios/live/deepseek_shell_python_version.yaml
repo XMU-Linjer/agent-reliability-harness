@@ -1,0 +1,24 @@
+id: deepseek_shell_python_version
+name: "DeepSeek Shell - Python Version"
+description: >
+  Ask DeepSeek to execute 'python --version' via execute_shell.
+  Tests the full chain: DeepSeek API -> tool_call -> sandbox execution.
+agent_run:
+  model: deepseek-v4-flash
+  provider: deepseek
+  tool_executor: local_sandbox
+  tools:
+    - execute_shell
+  max_steps: 3
+  task: "Run the command 'python --version' using execute_shell and tell me the Python version."
+  sandbox:
+    type: local_sandbox
+    timeout_seconds: 10
+    max_output_bytes: 20000
+policy:
+  allowed_models:
+    - deepseek-v4-flash
+  max_token_budget: 10000
+  max_tool_risk_level: critical
+expected_failure: none
+pass_criteria: "execute_shell runs python --version and returns a version string"

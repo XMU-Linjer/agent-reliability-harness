@@ -1,0 +1,20 @@
+id: deepseek_tool_call_read_file
+name: "DeepSeek Tool Call - Read File"
+description: >
+  Ask DeepSeek to read a file. DeepSeek should produce a read_file tool call,
+  which is executed by the configured tool executor (fake or sandbox).
+agent_run:
+  model: deepseek-v4-flash
+  provider: deepseek
+  tool_executor: fake
+  tools:
+    - read_file
+  max_steps: 3
+  task: "Please read the file 'hello.txt' and tell me what it contains."
+policy:
+  allowed_models:
+    - deepseek-v4-flash
+  max_token_budget: 10000
+  max_tool_risk_level: safe
+expected_failure: none
+pass_criteria: "DeepSeek produces a read_file tool call"

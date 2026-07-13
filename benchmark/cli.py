@@ -1,0 +1,297 @@
+﻿"""Minimal CLI for AgentReliabilityHarness."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+from typing import Any, Sequence
+
+from benchmark.benchmark_runner import BenchmarkRunner
+from benchmark.report_renderer import ReportRenderer
+
+
+def _configure_utf8_output() -> None:
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
+
+
+def build_parser() -> argparse.ArgumentParser:
+    """Build the command-line parser."""
+    parser = argparse.ArgumentParser(
+        prog="arh",
+        description="Run the AgentReliabilityHarness benchmark.",
+    )
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    run_parser = subparsers.add_parser(
+        "run",
+        help="Run all scenario YAML files and generate scorecard.json + report.md.",
+    )
+    run_parser.add_argument("--scenarios-dir", default="benchmark/scenarios")
+    run_parser.add_argument("--output-dir", default="runs/local-demo")
+    run_parser.add_argument("--run-id", default=None)
+    run_parser.add_argument(
+        "--provider", default=None, choices=["mock", "deepseek"],
+        help="LLM provider (default: from scenario YAML)",
+    )
+    run_parser.add_argument(
+        "--model", default=None,
+        help="Model identifier (e.g. deepseek-v4-flash)",
+    )
+    run_parser.add_argument(
+        "--tool-executor", default=None,
+        choices=["fake", "local_sandbox", "remote_mcp_sandbox"],
+        help="Tool executor type (default: from scenario YAML)",
+    )
+    run_parser.add_argument(
+        "--sandbox-root", default=None,
+        help="Sandbox root directory for local_sandbox executor",
+    )
+    run_parser.add_argument(
+        "--live", action="store_true",
+        help="Use run_scenario_live instead of run_scenario_day5",
+    )
+
+    chat_parser = subparsers.add_parser(
+        "chat",
+        help="Start an interactive DeepSeek chat session with guarded local sandbox tools.",
+    )
+    chat_parser.add_argument("--model", default="deepseek-v4-flash")
+    chat_parser.add_argument("--sandbox-root", default=".tmp/live-chat-sandbox")
+    chat_parser.add_argument("--output-dir", default="runs/live-chat")
+    chat_parser.add_argument(
+        "--tools",
+        default="read_file,execute_shell,search_web",
+        help="Comma-separated tools exposed to the model.",
+    )
+    chat_parser.add_argument("--max-steps", type=int, default=4)
+    chat_parser.add_argument("--max-token-budget", type=int, default=20000)
+    chat_parser.add_argument(
+        "--network-allowlist",
+        nargs="+",
+        default=["example.com", "baike.baidu.com", "bytedance.com", "zh.wikipedia.org"],
+        help="Domains allowed for search_web URL fetches. Accepts comma-separated or space-separated values.",
+    )
+    chat_parser.add_argument(
+        "--command-allowlist",
+        nargs="+",
+        default=["python"],
+        help="Command names allowed for execute_shell. Accepts comma-separated or space-separated values.",
+    )
+    chat_parser.add_argument(
+        "--prompt",
+        default=None,
+        help="Run one prompt non-interactively and exit.",
+    )
+    return parser
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    """CLI entry point used by both `arh` and `python -m`."""
+    _configure_utf8_output()
+    parser = build_parser()
+    args = parser.parse_args(argv)
+
+    if args.command == "run":
+        result = BenchmarkRunner(
+            scenarios_dir=args.scenarios_dir,
+            output_dir=args.output_dir,
+            run_id=args.run_id,
+            live=args.live,
+            provider_override=args.provider,
+            model_override=args.model,
+            tool_executor_override=args.tool_executor,
+            sandbox_root=args.sandbox_root,
+        ).run()
+
+        scorecard_file = result.scorecard_file
+        if scorecard_file is None:
+            raise RuntimeError("BenchmarkRunner did not produce a scorecard file")
+
+        with Path(scorecard_file).open("r", encoding="utf-8") as f:
+            scorecard = json.load(f)
+        if not isinstance(scorecard, dict):
+            raise RuntimeError("scorecard JSON must contain an object")
+
+        renderer = ReportRenderer()
+        report_path = Path(result.output_dir) / "report.md"
+        report_zh_path = Path(result.output_dir) / "report.zh.md"
+        report_en_path = Path(result.output_dir) / "report.en.md"
+        renderer.write_markdown(scorecard, report_path)
+        renderer.write_zh_markdown(scorecard, report_zh_path)
+        renderer.write_en_markdown(scorecard, report_en_path)
+
+        print(f"run_id: {result.run_id}")
+        print(f"scenarios_total: {result.scenarios_total}")
+        print(f"scenarios_passed: {result.scenarios_passed}")
+        print(f"pass_rate: {result.pass_rate:.4f}")
+        print(f"scorecard: {scorecard_file}")
+        print(f"report: {report_path}")
+        _print_security_alerts(scorecard, report_zh_path, report_en_path, scorecard_file)
+        return 0
+
+    if args.command == "chat":
+        from benchmark.live_chat import run_live_chat
+
+        tools = _split_csv(args.tools)
+        network_allowlist = _split_csv(args.network_allowlist)
+        command_allowlist = _split_csv(args.command_allowlist)
+        return run_live_chat(
+            model=args.model,
+            sandbox_root=args.sandbox_root,
+            output_dir=args.output_dir,
+            tools=tools,
+            max_steps=args.max_steps,
+            max_token_budget=args.max_token_budget,
+            network_allowlist=network_allowlist,
+            command_allowlist=command_allowlist,
+            single_prompt=args.prompt,
+        )
+
+    parser.error(f"Unknown command: {args.command}")
+    return 2
+
+
+def _split_csv(value: str | list[str]) -> list[str]:
+    raw_parts = value if isinstance(value, list) else [value]
+    parts: list[str] = []
+    for raw_part in raw_parts:
+        parts.extend(part.strip() for part in raw_part.split(",") if part.strip())
+    return parts
+
+
+def _print_security_alerts(
+    scorecard: dict[str, Any],
+    report_zh_path: Path,
+    report_en_path: Path,
+    scorecard_file: str,
+) -> None:
+    results = scorecard.get("results", [])
+    if not isinstance(results, list):
+        results = []
+    result_dicts = [result for result in results if isinstance(result, dict)]
+    security_events = [result for result in result_dicts if _is_security_event(result)]
+    defense_failures = [result for result in result_dicts if not result.get("passed")]
+
+    if defense_failures:
+        print("")
+        print("[防护失败 / DEFENSE FAILED]")
+        for result in defense_failures:
+            print(
+                f"- {result.get('scenario_id', 'unknown')}: "
+                f"status={result.get('status', 'unknown')}, "
+                f"failure_type={result.get('failure_type', 'unknown')}"
+            )
+
+    if security_events:
+        print("")
+        print("[安全告警 / SECURITY ALERT]")
+        if defense_failures:
+            print(f"{len(security_events)} security events detected. Some defenses failed.")
+        else:
+            print(
+                f"{len(security_events)} security events detected. "
+                "All dangerous actions were blocked or handled by the harness."
+            )
+        for result in security_events:
+            _print_security_event(result)
+
+    print("")
+    print("Reports:")
+    print(f"中文报告: {report_zh_path}")
+    print(f"English report: {report_en_path}")
+    print(f"Machine-readable scorecard: {scorecard_file}")
+    _print_next_steps(security_events, report_zh_path, report_en_path)
+
+
+def _print_security_event(result: dict[str, Any]) -> None:
+    case_id, attack_zh, attack_en = _case_labels(result)
+    print("")
+    print(f"[{case_id}] {attack_zh} / {attack_en}")
+    print(f"tool: {result.get('tool', '')}")
+    print(f"payload: {result.get('attack_payload', '')}")
+    if result.get("payload_length") is not None:
+        print(f"payload_length: {result.get('payload_length')}")
+    if result.get("payload_preview") is not None:
+        print(f"payload_preview: {result.get('payload_preview')}")
+    print(f"blocked_by: {result.get('blocked_by', '')}")
+    print(f"reason: {result.get('reason', '')}")
+    if result.get("error"):
+        print(f"error: {result.get('error')}")
+    print(f"中文原因: {result.get('reason_zh', '')}")
+    print(f"English reason: {result.get('reason_en', '')}")
+    print(f"status: {result.get('status', 'unknown')}")
+    print(f"failure_type: {result.get('failure_type', 'unknown')}")
+    print(f"trace: {result.get('trace_file', '')}")
+
+
+def _print_next_steps(
+    security_events: list[dict[str, Any]],
+    report_zh_path: Path,
+    report_en_path: Path,
+) -> None:
+    print("")
+    print("下一步 / Next steps:")
+    print("1. 查看中文报告:")
+    print(f"   notepad {report_zh_path}")
+    print("2. 查看英文报告:")
+    print(f"   notepad {report_en_path}")
+    if security_events:
+        first_trace = security_events[0].get("trace_file")
+        first_case = _case_labels(security_events[0])[0]
+        if first_trace:
+            print(f"3. 查看 {first_case} trace:")
+            print(f"   notepad {first_trace}")
+
+
+def _is_security_event(result: dict[str, Any]) -> bool:
+    return (
+        result.get("failure_type") != "none"
+        or result.get("status") in ("blocked", "failed", "recovered", "error")
+        or bool(result.get("blocked_by"))
+        or bool(result.get("attack_payload"))
+    )
+
+
+def _case_labels(result: dict[str, Any]) -> tuple[str, str, str]:
+    scenario_id = str(result.get("scenario_id", "unknown"))
+    labels = {
+        "ad_01_path_traversal_read_attempt": ("AD-01", "路径穿越读取", "Path traversal read attempt"),
+        "ad_02_linux_sensitive_path_read_attempt": ("AD-02", "Linux 敏感路径读取", "Linux sensitive path read attempt"),
+        "ad_03_windows_sensitive_path_read_attempt": ("AD-03", "Windows 敏感路径读取", "Windows sensitive path read attempt"),
+        "ad_04_outside_project_read_attempt": ("AD-04", "项目目录外读取", "Outside workspace read attempt"),
+        "ad_05_windows_system_path_write_attempt": ("AD-05", "写 Windows 系统路径", "Windows system path write attempt"),
+        "ad_06_linux_system_path_write_attempt": ("AD-06", "写 Linux 系统路径", "Linux system path write attempt"),
+        "ad_07_script_file_write_attempt": ("AD-07", "写脚本文件", "Script file write attempt"),
+        "ad_08_path_traversal_write_attempt": ("AD-08", "目录穿越写文件", "Directory traversal write attempt"),
+        "ad_09_delete_system_command_attempt": ("AD-09", "删除系统命令", "Dangerous delete command"),
+        "ad_10_read_system_file_command_attempt": ("AD-10", "读取系统文件命令", "Shell sensitive file read command"),
+        "ad_11_external_download_command_attempt": ("AD-11", "外联下载命令", "External download command"),
+        "ad_12_powershell_download_execute_attempt": ("AD-12", "PowerShell 下载执行", "PowerShell download-and-execute command"),
+        "ad_13_email_api_key_exfiltration_attempt": ("AD-13", "Email 外传 API key", "Email API key exfiltration attempt"),
+        "ad_14_email_password_exfiltration_attempt": ("AD-14", "Email 外传 password", "Email password exfiltration attempt"),
+        "ad_15_untrusted_email_recipient_attempt": ("AD-15", "发往不可信域名", "Untrusted email recipient attempt"),
+        "ad_16_url_query_secret_exfiltration_attempt": ("AD-16", "搜索/网络请求外传", "URL query secret exfiltration attempt"),
+        "ad_17_cloud_metadata_ssrf_attempt": ("AD-17", "云元数据 SSRF", "Cloud metadata SSRF attempt"),
+        "ad_18_localhost_probe_attempt": ("AD-18", "localhost 探测", "Localhost probe attempt"),
+        "ad_19_private_ip_probe_attempt": ("AD-19", "内网网段探测", "Private IP probe attempt"),
+        "ad_20_allowed_tools_bypass_attempt": ("AD-20", "allowed_tools 绕过", "Tool allowlist bypass attempt"),
+        "ad_21_denied_tools_bypass_attempt": ("AD-21", "denied_tools 绕过", "Denied tool bypass attempt"),
+        "ad_22_prompt_ignore_policy_tool_escalation_attempt": ("AD-22", "Prompt 诱导忽略策略", "Prompt injection tool escalation attempt"),
+        "ad_23_missing_required_field_attempt": ("AD-23", "缺失必需字段", "Missing required argument attempt"),
+        "ad_24_null_argument_attempt": ("AD-24", "字段为 null", "Null argument attempt"),
+        "ad_25_arguments_not_object_attempt": ("AD-25", "arguments 不是对象", "Non-object tool arguments attempt"),
+        "ad_26_oversized_argument_attempt": ("AD-26", "超长参数", "Oversized argument attempt"),
+        "ad_27_repeated_expensive_tool_call_attempt": ("AD-27", "重复高成本工具调用", "Repeated expensive tool call attempt"),
+        "ad_28_unverified_final_answer_attempt": ("AD-28", "未经工具验证直接回答", "Unverified final answer attempt"),
+        "ad_29_hide_trace_instruction_attempt": ("AD-29", "输出要求隐藏 trace", "Trace suppression instruction attempt"),
+        "ad_30_disallowed_model_switch_attempt": ("AD-30", "模型试图切换模型", "Disallowed model switch attempt"),
+    }
+    return labels.get(scenario_id, (scenario_id, scenario_id, scenario_id))
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

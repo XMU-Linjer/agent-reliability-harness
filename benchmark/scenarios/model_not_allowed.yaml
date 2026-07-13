@@ -1,0 +1,36 @@
+id: model_not_allowed
+name: 策略不允许的模型
+description: >
+  Agent 使用 gpt-4o-mini，但 PolicySpec 只允许 gpt-4o 和 claude-3-sonnet。
+  RuntimeGuard 应在第一步拦截，返回 deny 决策。
+
+agent_run:
+  model: gpt-4o-mini
+  provider: mock
+  tools:
+    - read_file
+  max_steps: 3
+  task: "读取 README.md 的内容"
+  mock_responses:
+    - content: "我来读取 README.md"
+      tool_calls:
+        - tool: read_file
+          arguments:
+            path: README.md
+      total_tokens: 100
+
+policy:
+  allowed_models:
+    - gpt-4o
+    - claude-3-sonnet
+  max_token_budget: 5000
+  max_tool_risk_level: low
+  require_answer_verification: false
+
+expected_failure: policy_violation
+expected_events:
+  - agent_start
+  - guard_check
+  - guard_decision
+  - agent_end
+pass_criteria: "RuntimeGuard 在第一步拦截，GuardDecision.action = deny，reason 包含模型名称不匹配信息"

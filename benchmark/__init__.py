@@ -1,0 +1,1 @@
+"""Benchmark suite: validates agent_guard SDK against 30 attack scenarios."""

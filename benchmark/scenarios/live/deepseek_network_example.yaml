@@ -1,0 +1,26 @@
+id: deepseek_network_example
+name: "DeepSeek Network - example.com"
+description: >
+  Ask DeepSeek to fetch https://example.com via search_web.
+  Tests real network access within the sandbox allowlist.
+agent_run:
+  model: deepseek-v4-flash
+  provider: deepseek
+  tool_executor: local_sandbox
+  tools:
+    - search_web
+  max_steps: 3
+  task: "Fetch the URL https://example.com using search_web and tell me the response."
+  sandbox:
+    type: local_sandbox
+    timeout_seconds: 20
+    max_output_bytes: 20000
+    network_allowlist:
+      - example.com
+policy:
+  allowed_models:
+    - deepseek-v4-flash
+  max_token_budget: 10000
+  max_tool_risk_level: safe
+expected_failure: none
+pass_criteria: "search_web fetches example.com and returns an HTTP response"

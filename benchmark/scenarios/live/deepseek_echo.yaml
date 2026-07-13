@@ -1,0 +1,19 @@
+id: deepseek_echo
+name: "DeepSeek Echo Test"
+description: >
+  Verify that the DeepSeek API is reachable and can return a simple text response.
+  No tools are called — this is a pure API connectivity check.
+agent_run:
+  model: deepseek-v4-flash
+  provider: deepseek
+  tool_executor: fake
+  tools: []
+  max_steps: 1
+  task: "Reply with exactly: Hello from DeepSeek"
+policy:
+  allowed_models:
+    - deepseek-v4-flash
+  max_token_budget: 5000
+  max_tool_risk_level: safe
+expected_failure: none
+pass_criteria: "DeepSeek returns a text response containing 'Hello'"
